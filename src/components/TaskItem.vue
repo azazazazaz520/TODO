@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, computed } from 'vue';
+import { ref, nextTick, computed, onMounted, onUnmounted } from 'vue';
 import type { Task } from '../types';
 
 const props = defineProps<{
@@ -12,10 +12,60 @@ const emit = defineEmits<{
   toggleDaily: [id: string, date: string];
   update: [id: string, title: string];
   delete: [id: string];
+  updateMeta: [id: string, tags: string[], important: boolean, pinned: boolean];
 }>();
 
 const editing = ref(false);
 const editTitle = ref('');
+const showMenu = ref(false);
+const menuTags = ref<string[]>([]);
+const menuNewTag = ref('');
+
+function openMenu() {
+  menuTags.value = [...props.task.tags];
+  menuNewTag.value = '';
+  showMenu.value = true;
+}
+
+function closeMenu() {
+  showMenu.value = false;
+}
+
+function toggleMenuImportant() {
+  emit('updateMeta', props.task.id, props.task.tags, !props.task.important, props.task.pinned);
+  showMenu.value = false;
+}
+
+function toggleMenuPinned() {
+  emit('updateMeta', props.task.id, props.task.tags, props.task.important, !props.task.pinned);
+  showMenu.value = false;
+}
+
+function addMenuTag() {
+  const t = menuNewTag.value.trim();
+  if (t && !menuTags.value.includes(t)) {
+    menuTags.value.push(t);
+    emit('updateMeta', props.task.id, [...menuTags.value], props.task.important, props.task.pinned);
+  }
+  menuNewTag.value = '';
+}
+
+function removeMenuTag(tag: string) {
+  menuTags.value = menuTags.value.filter(tg => tg !== tag);
+  emit('updateMeta', props.task.id, [...menuTags.value], props.task.important, props.task.pinned);
+}
+
+function onClickOutside(e: MouseEvent) {
+  if (showMenu.value) {
+    const el = e.target as HTMLElement;
+    if (!el.closest('.menu-wrapper')) {
+      showMenu.value = false;
+    }
+  }
+}
+
+onMounted(() => document.addEventListener('click', onClickOutside));
+onUnmounted(() => document.removeEventListener('click', onClickOutside));
 
 function startEdit() {
   editTitle.value = props.task.title;
@@ -129,14 +179,54 @@ const dueLabel = computed(() => {
       </template>
     </div>
 
-    <button
-      v-if="!editing"
-      class="task-delete-btn"
-      title="删除"
-      @click="emit('delete', task.id)"
-    >
-      ×
-    </button>
+    <div v-if="!editing" class="task-actions">
+      <div class="menu-wrapper">
+        <button
+          class="task-menu-btn"
+          title="更多操作"
+          @click.stop="openMenu"
+        >
+          ⋯
+        </button>
+        <div v-if="showMenu" class="task-menu" @click.stop>
+          <div class="menu-item" @click="toggleMenuImportant">
+            <span>⭐ 重要</span>
+            <span :class="['menu-toggle', { on: task.important }]">{{ task.important ? '开' : '关' }}</span>
+          </div>
+          <div class="menu-item" @click="toggleMenuPinned">
+            <span>📌 置顶</span>
+            <span :class="['menu-toggle', { on: task.pinned }]">{{ task.pinned ? '开' : '关' }}</span>
+          </div>
+          <div class="menu-divider"></div>
+          <div class="menu-tags">
+            <div class="menu-tags-header">🏷 标签</div>
+            <div class="menu-tags-list">
+              <span v-for="tag in menuTags" :key="tag" class="menu-tag-chip">
+                {{ tag }}
+                <button class="menu-tag-x" @click="removeMenuTag(tag)">×</button>
+              </span>
+            </div>
+            <div class="menu-tag-input-row">
+              <input
+                v-model="menuNewTag"
+                type="text"
+                class="menu-tag-input"
+                placeholder="新标签"
+                @keydown.enter.prevent="addMenuTag"
+              />
+              <button class="menu-tag-add" @click="addMenuTag">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button
+        class="task-delete-btn"
+        title="删除"
+        @click="emit('delete', task.id)"
+      >
+        ×
+      </button>
+    </div>
   </div>
 </template>
 
@@ -248,4 +338,136 @@ const dueLabel = computed(() => {
 }
 
 .task-delete-btn:hover { color: #e74c3c; }
+
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.menu-wrapper {
+  position: relative;
+}
+
+.task-menu-btn {
+  background: none;
+  border: none;
+  color: #ccc;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.task-menu-btn:hover { color: #666; }
+
+.task-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 6px;
+  z-index: 10;
+  width: 200px;
+}
+
+.menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.menu-item:hover { background: #f5f5f5; }
+
+.menu-toggle {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: #eee;
+  color: #999;
+}
+
+.menu-toggle.on {
+  background: #e8f0fe;
+  color: #4a90d9;
+}
+
+.menu-divider {
+  height: 1px;
+  background: #f0f0f0;
+  margin: 4px 0;
+}
+
+.menu-tags {
+  padding: 4px 10px;
+}
+
+.menu-tags-header {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+.menu-tags-list {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.menu-tag-chip {
+  font-size: 11px;
+  background: #e8f0fe;
+  color: #4a90d9;
+  padding: 1px 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.menu-tag-x {
+  background: none;
+  border: none;
+  color: #4a90d9;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+  line-height: 1;
+}
+
+.menu-tag-input-row {
+  display: flex;
+  gap: 4px;
+}
+
+.menu-tag-input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 12px;
+  outline: none;
+}
+
+.menu-tag-input:focus { border-color: #4a90d9; }
+
+.menu-tag-add {
+  background: #4a90d9;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
 </style>

@@ -109,6 +109,24 @@ async function handleUpdate(id: string, title: string) {
   task.title = title;
 }
 
+async function handleUpdateMeta(id: string, tags: string[], important: boolean, pinned: boolean) {
+  const task = tasks.value.find(t => t.id === id);
+  if (!task) return;
+  await invoke('update_task', {
+    id,
+    title: task.title,
+    dueDate: task.due_date,
+    tags,
+    important,
+    pinned,
+    isDaily: task.is_daily,
+  });
+  task.tags = tags;
+  task.important = important;
+  task.pinned = pinned;
+  allTags.value = await invoke<string[]>('get_all_tags');
+}
+
 async function handleDelete(id: string) {
   await invoke('delete_task', { id });
   tasks.value = tasks.value.filter(t => t.id !== id);
@@ -169,6 +187,7 @@ function handleAddTag(tag: string) {
       @toggle-daily="handleToggleDaily"
       @update="handleUpdate"
       @delete="handleDelete"
+      @update-meta="handleUpdateMeta"
     />
     <TaskStats
       :tasks="tasks"

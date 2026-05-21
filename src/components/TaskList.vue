@@ -13,6 +13,7 @@ const emit = defineEmits<{
   toggleDaily: [id: string, date: string];
   update: [id: string, title: string];
   delete: [id: string];
+  updateMeta: [id: string, tags: string[], important: boolean, pinned: boolean];
 }>();
 
 const sortedTasks = computed(() => {
@@ -47,6 +48,7 @@ const normalTasks = computed(() => sortedTasks.value.filter(t => !t.pinned || t.
           @toggle-daily="(id, date) => emit('toggleDaily', id, date)"
           @update="(id, title) => emit('update', id, title)"
           @delete="(id) => emit('delete', id)"
+          @update-meta="(id, tags, important, pinned) => emit('updateMeta', id, tags, important, pinned)"
         />
       </div>
       <div v-if="pinnedTasks.length > 0 && normalTasks.filter(t => !t.completed).length > 0" class="section-divider"></div>
