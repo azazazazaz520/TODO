@@ -89,7 +89,7 @@ const dueLabel = computed(() => {
         <span :class="['task-title', { done: task.completed }]">{{ task.title }}</span>
         <span class="task-meta">
           <span class="task-time">{{ formatTime(task.created_at) }}</span>
-          <span v-if="dueLabel" :class="['due-badge', dueStatus]">{{ dueLabel }}</span>
+          <span v-if="dueLabel && !task.completed" :class="['due-badge', dueStatus]">{{ dueLabel }}</span>
         </span>
       </template>
       <template v-else>
