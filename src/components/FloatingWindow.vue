@@ -214,7 +214,7 @@ onUnmounted(() => {
   min-height: 180px;
   border-radius: 14px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.08);
-  overflow: hidden;
+  overflow-y: auto;
   user-select: none;
   font-family: -apple-system, BlinkMacSystemFont, "Microsoft YaHei", sans-serif;
 }

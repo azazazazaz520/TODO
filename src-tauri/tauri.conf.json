@@ -22,7 +22,7 @@
         "label": "floating",
         "title": "TODO",
         "width": 320,
-        "height": 200,
+        "height": 360,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,
