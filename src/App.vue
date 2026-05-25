@@ -161,11 +161,16 @@ function handleAddTag(tag: string) {
   }
   selectedTags.value = [tag];
 }
+
+async function switchToFloating() {
+  await invoke('show_floating_window');
+}
 </script>
 
 <template>
   <div class="app">
     <h1 class="app-title">TODO</h1>
+    <button class="float-mode-btn" @click="switchToFloating">🔲 悬浮窗模式</button>
     <MiniCalendar
       :tasks="tasks"
       @select-date="handleSelectDate"
@@ -211,6 +216,22 @@ function handleAddTag(tag: string) {
   margin-bottom: 16px;
   text-align: center;
 }
+
+.float-mode-btn {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 12px;
+  background: #1a1a2e;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.float-mode-btn:hover { background: #2d2d44; }
 
 .overdue-alert {
   background: #fde8e8;
