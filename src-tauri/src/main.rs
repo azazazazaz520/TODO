@@ -1,13 +1,16 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::collections::HashSet;
 use std::sync::Mutex;
 use store::TaskStore;
 use tauri::Manager;
+use tauri_plugin_notification::NotificationExt;
 
 mod store;
 
 struct AppState {
     store: Mutex<TaskStore>,
+    notified_today: Mutex<HashSet<String>>,
 }
 
 #[tauri::command]
@@ -172,12 +175,25 @@ fn show_main_window(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn set_reminder_minutes(state: tauri::State<AppState>, minutes: u32) -> Result<(), String> {
+    let mut store = state.store.lock().unwrap();
+    store.reminder_minutes = minutes;
+    store::save_tasks(&store)
+}
+
+#[tauri::command]
+fn get_reminder_minutes(state: tauri::State<AppState>) -> u32 {
+    state.store.lock().unwrap().reminder_minutes
+}
+
 fn main() {
     let store = store::load_tasks();
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
         .manage(AppState {
             store: Mutex::new(store),
+            notified_today: Mutex::new(HashSet::new()),
         })
         .invoke_handler(tauri::generate_handler![
             get_tasks,
@@ -191,9 +207,86 @@ fn main() {
             get_all_tags,
             delete_tag,
             get_daily_completions,
+            set_reminder_minutes,
+            get_reminder_minutes,
             show_floating_window,
             show_main_window,
         ])
+        .setup(|app| {
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                loop {
+                    std::thread::sleep(std::time::Duration::from_secs(60));
+
+                    let reminder;
+                    let tasks_snapshot: Vec<(String, String, Option<String>)>;
+                    {
+                        let state = handle.state::<AppState>();
+                        let store = state.store.lock().unwrap();
+                        reminder = store.reminder_minutes;
+                        if reminder == 0 {
+                            continue;
+                        }
+                        tasks_snapshot = store
+                            .tasks
+                            .iter()
+                            .filter(|t| !t.completed && t.due_date.is_some())
+                            .map(|t| (t.id.clone(), t.title.clone(), t.due_date.clone()))
+                            .collect();
+                    }
+
+                    let now = chrono::Utc::now();
+                    let today = now.format("%Y-%m-%d").to_string();
+
+                    // Reset notified set at date change
+                    {
+                        let state = handle.state::<AppState>();
+                        let mut notified = state.notified_today.lock().unwrap();
+                        let should_reset = notified
+                            .get("__date__")
+                            .map(|d| d != &today)
+                            .unwrap_or(true);
+                        if should_reset {
+                            notified.clear();
+                            notified.insert(today.clone());
+                        }
+                    }
+
+                    for (task_id, title, due_date_opt) in &tasks_snapshot {
+                        let due_date = match due_date_opt {
+                            Some(d) => d,
+                            None => continue,
+                        };
+                        let due_str = format!("{}T23:59:59+00:00", due_date);
+                        let due_time = match chrono::DateTime::parse_from_rfc3339(&due_str) {
+                            Ok(t) => t,
+                            Err(_) => continue,
+                        };
+                        let diff_secs = due_time.timestamp() - now.timestamp();
+                        let diff_min = diff_secs / 60;
+                        if diff_min > 0 && diff_min <= reminder as i64 {
+                            let state = handle.state::<AppState>();
+                            let mut notified = state.notified_today.lock().unwrap();
+                            if !notified.contains(task_id) {
+                                notified.insert(task_id.clone());
+                                drop(notified);
+                                let minutes_left = diff_min;
+                                let _ = handle
+                                    .notification()
+                                    .builder()
+                                    .title("⏰ 任务即将到期")
+                                    .body(format!(
+                                        "\"{}\" 将在 {} 分钟后到期",
+                                        title, minutes_left
+                                    ))
+                                    .show();
+                            }
+                        }
+                    }
+                }
+            });
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
