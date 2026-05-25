@@ -242,11 +242,7 @@ fn main() {
                     {
                         let state = handle.state::<AppState>();
                         let mut notified = state.notified_today.lock().unwrap();
-                        let should_reset = notified
-                            .get("__date__")
-                            .map(|d| d != &today)
-                            .unwrap_or(true);
-                        if should_reset {
+                        if !notified.contains(&today) {
                             notified.clear();
                             notified.insert(today.clone());
                         }
