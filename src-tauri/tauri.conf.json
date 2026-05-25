@@ -12,10 +12,23 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "TODO",
         "width": 480,
         "height": 640,
         "resizable": true
+      },
+      {
+        "label": "floating",
+        "title": "TODO",
+        "width": 320,
+        "height": 200,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "resizable": false,
+        "visible": false,
+        "url": "/?window=floating"
       }
     ],
     "security": {
