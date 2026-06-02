@@ -39,7 +39,9 @@
       "Bash(echo \"EXIT_CODE=$?\")",
       "Bash(Set-Location \"C:\\\\Users\\\\Lenovo\\\\Desktop\\\\TODO\\\\src-tauri\")",
       "Bash(Select-Object -Index 105)",
-      "PowerShell($line = \\(Get-Content \"C:\\\\Users\\\\Lenovo\\\\Desktop\\\\TODO\\\\src\\\\components\\\\FloatingWindow.vue\"\\)[105]; $bytes = [System.Text.Encoding]::UTF8.GetBytes\\($line\\); Write-Host \\(\"Line: [\" + $line + \"]\"\\); Write-Host \\(\"First 10 bytes: \" + [string]::Join\\(\",\", $bytes[0..9]\\)\\))"
+      "PowerShell($line = \\(Get-Content \"C:\\\\Users\\\\Lenovo\\\\Desktop\\\\TODO\\\\src\\\\components\\\\FloatingWindow.vue\"\\)[105]; $bytes = [System.Text.Encoding]::UTF8.GetBytes\\($line\\); Write-Host \\(\"Line: [\" + $line + \"]\"\\); Write-Host \\(\"First 10 bytes: \" + [string]::Join\\(\",\", $bytes[0..9]\\)\\))",
+      "Bash(Get-ChildItem *)",
+      "Bash(python *)"
     ]
   }
 }

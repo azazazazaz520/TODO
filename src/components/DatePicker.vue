@@ -1,13 +1,25 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 
 const emit = defineEmits<{
   select: [date: string | null];
 }>();
 
-defineProps<{
+const props = defineProps<{
   visible: boolean;
 }>();
+
+function onClickOutside(e: MouseEvent) {
+  if (props.visible) {
+    const el = e.target as HTMLElement;
+    if (!el.closest('.datepicker') && !el.closest('.date-btn')) {
+      emit('select', null);
+    }
+  }
+}
+
+onMounted(() => document.addEventListener('click', onClickOutside));
+onUnmounted(() => document.removeEventListener('click', onClickOutside));
 
 const today = new Date();
 const currentYear = ref(today.getFullYear());

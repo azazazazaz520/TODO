@@ -12,6 +12,8 @@ const reminderMinutes = ref(30);
 const showPanel = ref(false);
 const isPaused = ref(false);
 let timer: ReturnType<typeof setInterval> | null = null;
+let pollInterval: ReturnType<typeof setInterval> | null = null;
+let unlistenFocus: (() => void) | null = null;
 
 const incompleteTasks = computed(() => tasks.value.filter(t => !t.completed));
 
@@ -108,19 +110,17 @@ onMounted(async () => {
   document.body.style.overflow = 'hidden';
   await loadTasks();
   resetTimer();
-  const interval = setInterval(loadTasks, 30000);
+  pollInterval = setInterval(loadTasks, 30000);
   const appWindow = getCurrentWindow();
-  const unlistenFocus = await appWindow.listen('tauri://focus', () => {
+  unlistenFocus = await appWindow.listen('tauri://focus', () => {
     loadTasks();
-  });
-  onUnmounted(() => {
-    clearInterval(interval);
-    unlistenFocus();
   });
 });
 
 onUnmounted(() => {
   if (timer) clearInterval(timer);
+  if (pollInterval) clearInterval(pollInterval);
+  if (unlistenFocus) unlistenFocus();
 });
 
 // Grab-to-scroll

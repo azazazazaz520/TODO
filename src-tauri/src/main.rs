@@ -235,8 +235,8 @@ fn main() {
                             .collect();
                     }
 
-                    let now = chrono::Utc::now();
-                    let today = now.format("%Y-%m-%d").to_string();
+                    let local_now = chrono::Local::now();
+                    let today = local_now.format("%Y-%m-%d").to_string();
 
                     // Reset notified set at date change
                     {
@@ -248,17 +248,20 @@ fn main() {
                         }
                     }
 
+                    let local_offset = local_now.offset();
+
                     for (task_id, title, due_date_opt) in &tasks_snapshot {
                         let due_date = match due_date_opt {
                             Some(d) => d,
                             None => continue,
                         };
-                        let due_str = format!("{}T23:59:59+00:00", due_date);
+                        // Use local timezone for due date end-of-day, not hardcoded UTC
+                        let due_str = format!("{}T23:59:59{}", due_date, local_offset);
                         let due_time = match chrono::DateTime::parse_from_rfc3339(&due_str) {
                             Ok(t) => t,
                             Err(_) => continue,
                         };
-                        let diff_secs = due_time.timestamp() - now.timestamp();
+                        let diff_secs = due_time.timestamp() - local_now.timestamp();
                         let diff_min = diff_secs / 60;
                         if diff_min > 0 && diff_min <= reminder as i64 {
                             let state = handle.state::<AppState>();
