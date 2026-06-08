@@ -107,10 +107,7 @@ fn toggle_daily_task(
 
 /// 更新任务的所有字段
 #[tauri::command]
-fn update_task(
-    state: tauri::State<AppState>,
-    args: UpdateTaskArgs,
-) -> Result<(), String> {
+fn update_task(state: tauri::State<AppState>, args: UpdateTaskArgs) -> Result<(), String> {
     let mut store = state.store.lock().unwrap();
     if let Some(task) = store.tasks.iter_mut().find(|t| t.id == args.id) {
         task.title = args.title;
