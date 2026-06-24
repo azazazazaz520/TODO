@@ -172,5 +172,5 @@ function handleClick(item: NavItem) {
 
 .sidebar-item.active {
   background: var(--bg-active);
-}</translate>
+}
 </style>
