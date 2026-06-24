@@ -40,3 +40,4 @@ npm-debug.log*
 docs/
 .agents/
 skills-lock.json
+AGENTS.md

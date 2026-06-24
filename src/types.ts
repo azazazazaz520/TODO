@@ -9,9 +9,62 @@ export interface Task {
   important: boolean;
   pinned: boolean;
   is_daily: boolean;
+  /** 父任务 ID，拆解产生的子任务指向其父任务 */
+  parent_id: string | null;
 }
 
 export interface DailyCompletion {
   task_id: string;
   date: string;
+}
+
+// ── 侧边栏模块 ──────────────────────────────
+
+/** 侧边栏导航的 5 个功能模块 */
+export type AppModule = 'tasks' | 'ai-assistant' | 'calendar' | 'floating' | 'settings';
+
+// ── AI 相关类型 ──────────────────────────────
+
+/** AI 服务配置（持久化到 tasks.json） */
+export interface AiSettings {
+  enabled: boolean;
+  api_endpoint: string;
+  api_key: string;
+  model: string;
+}
+
+/** AI 自然语言解析后的结构化任务 */
+export interface ParsedTask {
+  title: string;
+  due_date: string | null;
+  tags: string[];
+  important: boolean;
+  pinned: boolean;
+  is_daily: boolean;
+}
+
+/** 今日聚焦建议（AI 按优先级排序的结果） */
+export interface FocusSuggestion {
+  items: { task_id: string; reason: string }[];
+  summary: string;
+}
+
+/** 任务拆解产生的子任务 */
+export interface SubTask {
+  title: string;
+  estimated_minutes: number | null;
+}
+
+/** 过期任务的 AI 处理建议 */
+export interface OverdueSuggestion {
+  task_id: string;
+  action: 'reschedule' | 'abandon' | 'decompose';
+  new_date?: string;
+  reason: string;
+}
+
+/** AI 助手对话消息 */
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
 }
