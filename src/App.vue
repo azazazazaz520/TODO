@@ -332,7 +332,7 @@ function handleSwitchModule(module: AppModule) {
   display: flex;
   height: 100vh;
   overflow: hidden;
-  background: #f8f8f8;
+  background: var(--bg-secondary);
 }
 
 .main-content {
@@ -355,7 +355,7 @@ function handleSwitchModule(module: AppModule) {
 
 /* 任务看板头部：标题 + 统计 + AI 状态 */
 .module-header {
-  padding: 12px 20px 8px;
+  padding: var(--space-md) var(--space-xl) var(--space-sm);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -363,34 +363,34 @@ function handleSwitchModule(module: AppModule) {
 
 .module-title {
   font-weight: 600;
-  font-size: 16px;
-  color: #222;
+  font-size: var(--text-md);
+  color: var(--text-primary);
   margin: 0;
 }
 
 .module-subtitle {
-  font-size: 11px;
-  color: #bbb;
+  font-size: var(--text-xs);
+  color: var(--text-disabled);
   margin-top: 2px;
   display: block;
 }
 
 .ai-status {
-  font-size: 10px;
-  color: #888;
-  padding: 3px 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  font-size: var(--text-xs);
+  color: var(--gray-600);
+  padding: 3px var(--space-sm);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
   white-space: nowrap;
 }
 
 /* 任务看板内容区：左右分区布局 */
 .module-body {
   flex: 1;
-  padding: 0 20px 12px;
+  padding: 0 var(--space-xl) var(--space-md);
   overflow: hidden;
   display: flex;
-  gap: 14px;
+  gap: var(--space-sm);
 }
 
 /* 左侧工具栏：日历 + 标签筛选，固定宽度 */
@@ -400,7 +400,7 @@ function handleSwitchModule(module: AppModule) {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-sm);
 }
 
 /* 右侧任务区：输入 + 列表 + 统计，flex 填充 */
@@ -412,13 +412,13 @@ function handleSwitchModule(module: AppModule) {
 
 /* 占位模块（尚未实现的 Phase） */
 .module-placeholder {
-  padding: 20px;
+  padding: var(--space-xl);
   align-items: center;
   justify-content: center;
 }
 
 .placeholder-text {
-  color: #bbb;
-  font-size: 13px;
+  color: var(--text-disabled);
+  font-size: var(--text-base);
 }
 </style>

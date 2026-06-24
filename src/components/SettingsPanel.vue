@@ -174,14 +174,14 @@ const subModules: { key: SettingsSubModule; label: string }[] = [
 }
 
 .settings-header {
-  padding: 16px 24px 12px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: var(--space-lg) var(--space-2xl) var(--space-md);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .settings-header h2 {
   font-weight: 600;
-  font-size: 18px;
-  color: #1a1a2e;
+  font-size: var(--text-lg);
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -194,8 +194,8 @@ const subModules: { key: SettingsSubModule; label: string }[] = [
 .settings-nav {
   width: 140px;
   flex-shrink: 0;
-  padding: 12px 8px;
-  border-right: 1px solid #f0f0f0;
+  padding: var(--space-md) var(--space-sm);
+  border-right: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -204,28 +204,28 @@ const subModules: { key: SettingsSubModule; label: string }[] = [
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: none;
-  font-size: 12px;
-  color: #666;
+  font-size: var(--text-sm);
+  color: var(--gray-700);
   cursor: pointer;
   text-align: left;
 }
 .nav-item:hover {
-  background: #f5f5f5;
+  background: var(--bg-hover);
 }
 .nav-item.active {
-  background: #f0f0f0;
-  color: #333;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
   font-weight: 500;
 }
 
 .settings-main {
   flex: 1;
-  padding: 16px 24px;
+  padding: var(--space-lg) var(--space-2xl);
   overflow-y: auto;
 }
 
@@ -234,88 +234,88 @@ const subModules: { key: SettingsSubModule; label: string }[] = [
 }
 
 .sub-placeholder {
-  color: #999;
-  font-size: 13px;
+  color: var(--text-muted);
+  font-size: var(--text-base);
 }
 
 .settings-group {
-  background: #fff;
-  border: 1px solid #eee;
-  border-radius: 10px;
-  padding: 16px;
-  margin-bottom: 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
 }
 
 .group-title {
   font-weight: 600;
-  font-size: 14px;
-  margin-bottom: 12px;
-  color: #222;
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-md);
+  color: var(--text-primary);
 }
 
 .setting-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #f5f5f5;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--bg-hover);
 }
 .setting-row:last-of-type {
   border-bottom: none;
 }
 
 .setting-row label {
-  font-size: 13px;
-  color: #444;
+  font-size: var(--text-base);
+  color: var(--text-secondary);
 }
 
 .setting-row input[type='text'],
 .setting-row input[type='password'] {
   width: 220px;
-  padding: 6px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  font-size: 12px;
+  padding: 6px var(--space-sm);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
   text-align: right;
   outline: none;
 }
 .setting-row input:focus {
-  border-color: #4a90d9;
+  border-color: var(--accent);
 }
 
 .number-input {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-xs);
 }
 .number-input input {
   width: 60px;
-  padding: 6px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  font-size: 12px;
+  padding: 6px var(--space-sm);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
   text-align: right;
   outline: none;
 }
 
 .unit {
-  font-size: 12px;
-  color: #999;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
 }
 
 .save-btn {
-  margin-top: 12px;
-  padding: 8px 20px;
-  background: #4a90d9;
+  margin-top: var(--space-md);
+  padding: var(--space-sm) var(--space-xl);
+  background: var(--accent);
   color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--transition-fast);
 }
 .save-btn:hover {
-  background: #357abd;
+  background: var(--accent-hover);
 }
 .save-btn:disabled {
   opacity: 0.6;
