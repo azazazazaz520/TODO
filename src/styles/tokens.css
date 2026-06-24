@@ -76,3 +76,100 @@
   --transition-normal: 0.2s;
   --easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* ═══════════════════════════════════════════
+   暗色模式
+   data-theme="dark" 手动切换
+   @media (prefers-color-scheme: dark) 跟随系统
+   ═══════════════════════════════════════════ */
+
+[data-theme='dark'] {
+  /* ── 背景 ──────────────────────────── */
+  --bg-primary: #1e1e2e;
+  --bg-secondary: #181825;
+  --bg-tertiary: #313244;
+  --bg-hover: #2a2a3c;
+  --bg-active: #45475a;
+
+  /* ── 文字 ──────────────────────────── */
+  --text-primary: #cdd6f4;
+  --text-secondary: #a6adc8;
+  --text-muted: #6c7086;
+  --text-disabled: #585b70;
+
+  /* ── 边框 ──────────────────────────── */
+  --border-light: #313244;
+  --border-default: #45475a;
+  --border-subtle: #2a2a3c;
+
+  /* ── 强调色（暗色下稍亮） ──────────── */
+  --accent: #89b4fa;
+  --accent-hover: #74c7ec;
+  --accent-light: rgba(137, 180, 250, 0.1);
+  --accent-muted: rgba(137, 180, 250, 0.2);
+
+  /* ── 状态色 ────────────────────────── */
+  --danger: #f38ba8;
+  --danger-light: rgba(243, 139, 168, 0.15);
+  --warning: #fab387;
+  --warning-light: rgba(250, 179, 135, 0.15);
+  --success: #a6e3a1;
+
+  /* ── 灰度阶梯 ──────────────────────── */
+  --gray-100: #1e1e2e;
+  --gray-200: #313244;
+  --gray-300: #45475a;
+  --gray-400: #585b70;
+  --gray-500: #6c7086;
+  --gray-600: #7f849c;
+  --gray-700: #9399b2;
+  --gray-800: #a6adc8;
+  --gray-900: #cdd6f4;
+}
+
+/* 跟随系统：仅在 data-theme="auto" 时生效 */
+@media (prefers-color-scheme: dark) {
+  [data-theme='auto'] {
+    /* ── 背景 ──────────────────────────── */
+    --bg-primary: #1e1e2e;
+    --bg-secondary: #181825;
+    --bg-tertiary: #313244;
+    --bg-hover: #2a2a3c;
+    --bg-active: #45475a;
+
+    /* ── 文字 ──────────────────────────── */
+    --text-primary: #cdd6f4;
+    --text-secondary: #a6adc8;
+    --text-muted: #6c7086;
+    --text-disabled: #585b70;
+
+    /* ── 边框 ──────────────────────────── */
+    --border-light: #313244;
+    --border-default: #45475a;
+    --border-subtle: #2a2a3c;
+
+    /* ── 强调色 ────────────────────────── */
+    --accent: #89b4fa;
+    --accent-hover: #74c7ec;
+    --accent-light: rgba(137, 180, 250, 0.1);
+    --accent-muted: rgba(137, 180, 250, 0.2);
+
+    /* ── 状态色 ────────────────────────── */
+    --danger: #f38ba8;
+    --danger-light: rgba(243, 139, 168, 0.15);
+    --warning: #fab387;
+    --warning-light: rgba(250, 179, 135, 0.15);
+    --success: #a6e3a1;
+
+    /* ── 灰度阶梯 ──────────────────────── */
+    --gray-100: #1e1e2e;
+    --gray-200: #313244;
+    --gray-300: #45475a;
+    --gray-400: #585b70;
+    --gray-500: #6c7086;
+    --gray-600: #7f849c;
+    --gray-700: #9399b2;
+    --gray-800: #a6adc8;
+    --gray-900: #cdd6f4;
+  }
+}

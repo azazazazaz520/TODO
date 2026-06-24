@@ -2,7 +2,10 @@
 import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import type { AiSettings, SettingsSubModule } from '../types';
+import { useTheme, type ThemeMode } from '../composables/useTheme';
 import VendorList from './VendorList.vue';
+
+const { theme, setTheme } = useTheme();
 
 const activeSub = ref<SettingsSubModule>('preferences');
 
@@ -111,6 +114,22 @@ const subModules: { key: SettingsSubModule; label: string }[] = [
       <div class="settings-main">
         <!-- 偏好设置 -->
         <div v-if="activeSub === 'preferences'" class="sub-page">
+          <div class="settings-group">
+            <div class="group-title">外观</div>
+            <div class="setting-row">
+              <label>主题模式</label>
+              <select
+                :value="theme"
+                class="theme-select"
+                @change="setTheme(($event.target as HTMLSelectElement).value as ThemeMode)"
+              >
+                <option value="auto">跟随系统</option>
+                <option value="light">浅色</option>
+                <option value="dark">深色</option>
+              </select>
+            </div>
+          </div>
+
           <div class="settings-group">
             <div class="group-title">AI 设置</div>
             <div class="setting-row">
@@ -320,5 +339,19 @@ const subModules: { key: SettingsSubModule; label: string }[] = [
 .save-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.theme-select {
+  padding: 6px var(--space-sm);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  outline: none;
+  cursor: pointer;
+}
+.theme-select:focus {
+  border-color: var(--accent);
 }
 </style>
