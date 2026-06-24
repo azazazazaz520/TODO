@@ -243,30 +243,37 @@ function handleSwitchModule(module: AppModule) {
           <span v-if="aiEnabled" class="ai-status">AI 已连接</span>
         </div>
         <div class="module-body">
-          <MiniCalendar
-            :tasks="tasks"
-            @select-date="handleSelectDate"
-          />
-          <TagFilterBar
-            :tags="allTags"
-            :selected="selectedTags"
-            @toggle-tag="handleToggleTag"
-            @add-tag="handleAddTag"
-          />
-          <TaskInput @add="handleAdd" />
-          <TaskList
-            :tasks="filteredTasks"
-            :daily-completions-map="dailyCompletionsMap"
-            @toggle="handleToggle"
-            @toggle-daily="handleToggleDaily"
-            @update="handleUpdate"
-            @delete="handleDelete"
-            @update-meta="handleUpdateMeta"
-          />
-          <TaskStats
-            :tasks="tasks"
-            @clear-completed="handleClearCompleted"
-          />
+          <!-- 左侧工具栏：日历 + 标签筛选 -->
+          <aside class="task-sidebar">
+            <MiniCalendar
+              :tasks="tasks"
+              @select-date="handleSelectDate"
+            />
+            <TagFilterBar
+              :tags="allTags"
+              :selected="selectedTags"
+              @toggle-tag="handleToggleTag"
+              @add-tag="handleAddTag"
+            />
+          </aside>
+
+          <!-- 右侧任务区：输入 + 列表 + 统计 -->
+          <div class="task-main">
+            <TaskInput @add="handleAdd" />
+            <TaskList
+              :tasks="filteredTasks"
+              :daily-completions-map="dailyCompletionsMap"
+              @toggle="handleToggle"
+              @toggle-daily="handleToggleDaily"
+              @update="handleUpdate"
+              @delete="handleDelete"
+              @update-meta="handleUpdateMeta"
+            />
+            <TaskStats
+              :tasks="tasks"
+              @clear-completed="handleClearCompleted"
+            />
+          </div>
         </div>
       </div>
 
@@ -347,11 +354,30 @@ function handleSwitchModule(module: AppModule) {
   white-space: nowrap;
 }
 
-/* 任务看板内容区：可滚动 */
+/* 任务看板内容区：左右分区布局 */
 .module-body {
   flex: 1;
   padding: 0 24px 16px;
+  overflow: hidden;
+  display: flex;
+  gap: 16px;
+}
+
+/* 左侧工具栏：日历 + 标签筛选，固定宽度 */
+.task-sidebar {
+  width: 190px;
+  flex-shrink: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 右侧任务区：输入 + 列表 + 统计，flex 填充 */
+.task-main {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 0;
 }
 
 /* 占位模块（尚未实现的 Phase） */

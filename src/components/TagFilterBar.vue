@@ -77,7 +77,7 @@ function handleAddTag() {
 
 <style scoped>
 .tag-filter {
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 
 .tag-chips {
