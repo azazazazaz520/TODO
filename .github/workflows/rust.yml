@@ -40,6 +40,7 @@ jobs:
   # =========================================================================
   commitlint:
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -53,8 +54,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint commits
-        run: npx commitlint --from HEAD~1 --to HEAD --verbose
+      - name: Lint commits (since last merge from base)
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          LAST_SYNC=$(git merge-base origin/${{ github.event.pull_request.base.ref }} HEAD)
+          npx commitlint --from $LAST_SYNC --to HEAD --verbose
 
   # =========================================================================
   # Rust 后端：格式检查、编译、测试

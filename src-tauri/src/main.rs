@@ -127,19 +127,34 @@ fn update_task(state: tauri::State<AppState>, args: UpdateTaskArgs) -> Result<()
     store::save_tasks(&store)
 }
 
-/// 删除指定任务
+/// 删除指定任务（同时清理子任务和每日完成记录）
 #[tauri::command]
 fn delete_task(state: tauri::State<AppState>, id: String) -> Result<(), String> {
     let mut store = state.store.lock().unwrap();
+    // 删除目标任务
     store.tasks.retain(|t| t.id != id);
+    // 级联删除子任务（parent_id 指向被删任务的）
+    store.tasks.retain(|t| t.parent_id.as_deref() != Some(&id));
+    // 清理孤儿 daily_completions
+    store.daily_completions.retain(|dc| dc.task_id != id);
     store::save_tasks(&store)
 }
 
-/// 一键清除所有已完成任务
+/// 一键清除所有已完成任务（同时清理对应的每日完成记录）
 #[tauri::command]
 fn clear_completed(state: tauri::State<AppState>) -> Result<(), String> {
     let mut store = state.store.lock().unwrap();
+    let completed_ids: Vec<String> = store
+        .tasks
+        .iter()
+        .filter(|t| t.completed)
+        .map(|t| t.id.clone())
+        .collect();
     store.tasks.retain(|t| !t.completed);
+    // 清理已删除任务的 daily_completions
+    for id in &completed_ids {
+        store.daily_completions.retain(|dc| &dc.task_id != id);
+    }
     store::save_tasks(&store)
 }
 
@@ -245,6 +260,16 @@ fn get_ai_settings(state: tauri::State<AppState>) -> store::AiSettings {
     state.store.lock().unwrap().ai_settings.clone()
 }
 
+/// 获取完整 AI 配置（含 active_vendor_id）
+#[tauri::command]
+fn get_ai_settings_all(state: tauri::State<AppState>) -> serde_json::Value {
+    let store = state.store.lock().unwrap();
+    serde_json::json!({
+        "active_vendor_id": store.active_vendor_id,
+        "ai_settings": store.ai_settings,
+    })
+}
+
 /// 更新 AI 服务配置（持久化到 tasks.json）
 #[tauri::command]
 fn set_ai_settings(
@@ -254,6 +279,86 @@ fn set_ai_settings(
     let mut store = state.store.lock().unwrap();
     store.ai_settings = settings;
     store::save_tasks(&store)
+}
+
+// ── AI 供应商命令 ──────────────────────────────
+
+/// 获取所有供应商
+#[tauri::command]
+fn get_vendors(state: tauri::State<AppState>) -> Vec<store::Vendor> {
+    state.store.lock().unwrap().vendors.clone()
+}
+
+/// 添加供应商
+#[tauri::command]
+fn add_vendor(
+    state: tauri::State<AppState>,
+    vendor: store::Vendor,
+) -> Result<store::Vendor, String> {
+    let mut store = state.store.lock().unwrap();
+    store.vendors.push(vendor.clone());
+    store::save_tasks(&store)?;
+    Ok(vendor)
+}
+
+/// 更新供应商
+#[tauri::command]
+fn update_vendor(state: tauri::State<AppState>, vendor: store::Vendor) -> Result<(), String> {
+    let mut store = state.store.lock().unwrap();
+    if let Some(v) = store.vendors.iter_mut().find(|v| v.id == vendor.id) {
+        *v = vendor;
+    }
+    store::save_tasks(&store)
+}
+
+/// 删除供应商
+#[tauri::command]
+fn delete_vendor(state: tauri::State<AppState>, id: String) -> Result<(), String> {
+    let mut store = state.store.lock().unwrap();
+    store.vendors.retain(|v| v.id != id);
+    // 如果删除的是当前激活的供应商，清除激活状态
+    if store.active_vendor_id.as_deref() == Some(&id) {
+        store.active_vendor_id = None;
+    }
+    store::save_tasks(&store)
+}
+
+/// 设置激活的供应商
+#[tauri::command]
+fn set_active_vendor(state: tauri::State<AppState>, id: Option<String>) -> Result<(), String> {
+    let mut store = state.store.lock().unwrap();
+    store.active_vendor_id = id;
+    store::save_tasks(&store)
+}
+
+/// 解析当前 AI 配置：优先用选中的供应商，否则用第一个启用的，兜底用旧 ai_settings
+fn resolve_ai_settings(store: &TaskStore) -> store::AiSettings {
+    // 1. 有 active_vendor_id 且供应商存在且启用
+    if let Some(active_id) = &store.active_vendor_id {
+        if let Some(v) = store
+            .vendors
+            .iter()
+            .find(|v| v.id == *active_id && v.enabled)
+        {
+            return store::AiSettings {
+                enabled: true,
+                api_endpoint: format!("{}{}", v.base_url, v.api_path),
+                api_key: v.api_key.clone(),
+                model: v.model.clone(),
+            };
+        }
+    }
+    // 2. 找第一个启用的供应商
+    if let Some(v) = store.vendors.iter().find(|v| v.enabled) {
+        return store::AiSettings {
+            enabled: true,
+            api_endpoint: format!("{}{}", v.base_url, v.api_path),
+            api_key: v.api_key.clone(),
+            model: v.model.clone(),
+        };
+    }
+    // 3. 兜底用旧配置
+    store.ai_settings.clone()
 }
 
 // ── AI 功能命令 ──────────────────────────────
@@ -266,7 +371,7 @@ async fn ai_parse_input(
 ) -> Result<ai::ParsedTask, String> {
     let (settings, existing_tags) = {
         let store = state.store.lock().unwrap();
-        let settings = store.ai_settings.clone();
+        let settings = resolve_ai_settings(&store);
         let existing_tags: Vec<String> = store.tasks.iter().flat_map(|t| t.tags.clone()).collect();
         (settings, existing_tags)
     };
@@ -278,7 +383,7 @@ async fn ai_parse_input(
 async fn ai_daily_focus(state: tauri::State<'_, AppState>) -> Result<ai::FocusSuggestion, String> {
     let (settings, tasks) = {
         let store = state.store.lock().unwrap();
-        let settings = store.ai_settings.clone();
+        let settings = resolve_ai_settings(&store);
         let tasks = store.tasks.clone();
         (settings, tasks)
     };
@@ -293,7 +398,7 @@ async fn ai_decompose(
 ) -> Result<Vec<ai::SubTask>, String> {
     let (settings, task_title, existing_subtasks) = {
         let store = state.store.lock().unwrap();
-        let settings = store.ai_settings.clone();
+        let settings = resolve_ai_settings(&store);
         let task_title = store
             .tasks
             .iter()
@@ -318,7 +423,7 @@ async fn ai_overdue_suggest(
 ) -> Result<Vec<ai::OverdueSuggestion>, String> {
     let (settings, overdue) = {
         let store = state.store.lock().unwrap();
-        let settings = store.ai_settings.clone();
+        let settings = resolve_ai_settings(&store);
         let today = chrono::Local::now().format("%Y-%m-%d").to_string();
         let overdue: Vec<store::Task> = store
             .tasks
@@ -336,7 +441,7 @@ async fn ai_overdue_suggest(
 async fn ai_chat(state: tauri::State<'_, AppState>, message: String) -> Result<String, String> {
     let (settings, tasks) = {
         let store = state.store.lock().unwrap();
-        let settings = store.ai_settings.clone();
+        let settings = resolve_ai_settings(&store);
         let tasks = store.tasks.clone();
         (settings, tasks)
     };
@@ -368,7 +473,13 @@ fn main() {
             set_reminder_minutes,
             get_reminder_minutes,
             get_ai_settings,
+            get_ai_settings_all,
             set_ai_settings,
+            get_vendors,
+            add_vendor,
+            update_vendor,
+            delete_vendor,
+            set_active_vendor,
             show_floating_window,
             show_main_window,
             ai_parse_input,
