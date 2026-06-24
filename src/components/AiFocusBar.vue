@@ -40,13 +40,20 @@ const hasItems = computed(() => (suggestion.value?.items?.length ?? 0) > 0);
   <div class="focus-bar" v-if="suggestion || error">
     <!-- 错误提示 -->
     <div v-if="error" class="focus-error" @click="error = ''">
-      ⚠️ {{ error }}
+      <svg class="error-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      {{ error }}
     </div>
 
     <!-- 聚焦建议内容 -->
     <div v-if="suggestion" class="focus-content">
       <div class="focus-header" @click="expanded = !expanded">
-        <span class="focus-icon">🔍</span>
+        <svg class="focus-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
         <span class="focus-summary">{{ suggestion.summary }}</span>
         <button
           class="focus-refresh"
@@ -54,7 +61,10 @@ const hasItems = computed(() => (suggestion.value?.items?.length ?? 0) > 0);
           title="刷新建议"
           @click.stop="refresh"
         >
-          {{ loading ? '⟳' : '↻' }}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
         </button>
       </div>
 
@@ -70,8 +80,14 @@ const hasItems = computed(() => (suggestion.value?.items?.length ?? 0) > 0);
 
   <!-- 初始状态：加载按钮 -->
   <div v-else class="focus-trigger" @click="refresh">
-    <span v-if="loading">⟳ AI 分析中...</span>
-    <span v-else>🔍 今日聚焦建议</span>
+    <span v-if="loading"> AI 分析中...</span>
+    <span v-else>
+      <svg class="trigger-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      今日聚焦建议
+    </span>
   </div>
 </template>
 
@@ -87,6 +103,13 @@ const hasItems = computed(() => (suggestion.value?.items?.length ?? 0) > 0);
   cursor: pointer;
   transition: color 0.15s;
   user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.trigger-icon {
+  flex-shrink: 0;
 }
 .focus-trigger:hover {
   color: #4a90d9;
@@ -97,6 +120,13 @@ const hasItems = computed(() => (suggestion.value?.items?.length ?? 0) > 0);
   color: #e74c3c;
   padding: 6px 0;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.error-icon {
+  flex-shrink: 0;
 }
 
 .focus-content {
@@ -116,8 +146,8 @@ const hasItems = computed(() => (suggestion.value?.items?.length ?? 0) > 0);
 }
 
 .focus-icon {
-  font-size: 13px;
   flex-shrink: 0;
+  color: #999;
 }
 
 .focus-summary {

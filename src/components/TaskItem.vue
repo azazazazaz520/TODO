@@ -159,8 +159,14 @@ const dueLabel = computed(() => {
       <template v-if="!editing">
         <div class="task-title-row">
           <span :class="['task-title', { done: displayCompleted }]">{{ task.title }}</span>
-          <span v-if="task.important && !displayCompleted" class="icon-star">⭐</span>
-          <span v-if="task.is_daily" class="icon-daily" :class="{ done: displayCompleted }">☀️</span>
+          <svg v-if="task.important && !displayCompleted" class="icon-star" width="12" height="12" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          <svg v-if="task.is_daily" class="icon-daily" :class="{ done: displayCompleted }" width="12" height="12" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
         </div>
         <div class="task-meta">
           <span class="task-time">{{ formatTime(task.created_at) }}</span>
@@ -200,11 +206,17 @@ const dueLabel = computed(() => {
         </button>
         <div v-if="showMenu" class="task-menu" @click.stop>
           <div class="menu-item" @click="toggleMenuImportant">
-            <span>⭐ 重要</span>
+            <span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              重要
+            </span>
             <span :class="['menu-toggle', { on: task.important }]">{{ task.important ? '开' : '关' }}</span>
           </div>
           <div class="menu-item" @click="toggleMenuPinned">
-            <span>📌 置顶</span>
+            <span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v-7"/><path d="M8 10l4-4 4 4"/><path d="M5 21h14"/></svg>
+              置顶
+            </span>
             <span :class="['menu-toggle', { on: task.pinned }]">{{ task.pinned ? '开' : '关' }}</span>
           </div>
           <div class="menu-divider"></div>
@@ -285,8 +297,8 @@ const dueLabel = computed(() => {
 
 .task-title.done { text-decoration: line-through; color: #bbb; }
 
-.icon-star { font-size: 11px; flex-shrink: 0; }
-.icon-daily { font-size: 11px; flex-shrink: 0; }
+.icon-star { flex-shrink: 0; color: #e6a817; }
+.icon-daily { flex-shrink: 0; color: #e67e22; }
 .icon-daily.done { opacity: 0.4; }
 
 .task-meta {

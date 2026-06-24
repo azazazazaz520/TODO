@@ -40,7 +40,10 @@ const normalTasks = computed(() => sortedTasks.value.filter(t => !t.pinned || t.
     </div>
     <template v-else>
       <div v-if="pinnedTasks.length > 0" class="pinned-section">
-        <div class="pinned-header">📌 已置顶</div>
+        <div class="pinned-header">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v-7"/><path d="M8 10l4-4 4 4"/><path d="M5 21h14"/></svg>
+          已置顶
+        </div>
         <TaskItem
           v-for="task in pinnedTasks"
           :key="task.id"
@@ -97,6 +100,9 @@ const normalTasks = computed(() => sortedTasks.value.filter(t => !t.pinned || t.
   font-weight: 600;
   color: #999;
   border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .section-divider {

@@ -10,14 +10,12 @@ const inputText = ref('');
 const loading = ref(false);
 const chatContainer = ref<HTMLElement | null>(null);
 
-/** AI 是否已配置（用于未配置时提示用户） */
-const aiConfigured = ref(false);
-
-// ── 快捷操作 ──────────────────────────────
+// ── 快捷操作 ─────────────────────────────
 
 interface QuickAction {
   label: string;
-  icon: string;
+  /** SVG path data */
+  iconPath: string;
   command?: string;
   prompt?: string;
 }
@@ -25,22 +23,22 @@ interface QuickAction {
 const quickActions: QuickAction[] = [
   {
     label: '今天该做什么',
-    icon: '🎯',
+    iconPath: 'M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z',
     command: 'ai_daily_focus',
   },
   {
     label: '处理过期任务',
-    icon: '⏰',
+    iconPath: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 6v6l4 2',
     command: 'ai_overdue_suggest',
   },
   {
     label: '任务统计',
-    icon: '📊',
+    iconPath: 'M18 20V10M12 20V4M6 20v-6',
     prompt: '根据我当前的任务数据，给出一个简短的统计概览（总数、完成率、过期数）。',
   },
   {
     label: '建议排序',
-    icon: '📋',
+    iconPath: 'M3 6h18M7 12h10M10 18h4',
     prompt: '根据截止日期和重要性，帮我重新排序今天的待办任务。',
   },
 ];
@@ -68,10 +66,9 @@ async function sendMessage() {
   try {
     const reply = await invoke<string>('ai_chat', { message: text });
     messages.value.push({ role: 'assistant', content: reply });
-    aiConfigured.value = true;
   } catch (e: any) {
     const errMsg = typeof e === 'string' ? e : '请求失败';
-    messages.value.push({ role: 'assistant', content: `⚠️ ${errMsg}` });
+    messages.value.push({ role: 'assistant', content: `[错误] ${errMsg}` });
   } finally {
     loading.value = false;
     await scrollToBottom();
@@ -96,10 +93,9 @@ async function runQuickAction(action: QuickAction) {
       const reply = await invoke<string>('ai_chat', { message: action.prompt });
       messages.value.push({ role: 'assistant', content: reply });
     }
-    aiConfigured.value = true;
   } catch (e: any) {
     const errMsg = typeof e === 'string' ? e : '请求失败';
-    messages.value.push({ role: 'assistant', content: `⚠️ ${errMsg}` });
+    messages.value.push({ role: 'assistant', content: `[错误] ${errMsg}` });
   } finally {
     loading.value = false;
     await scrollToBottom();
@@ -110,23 +106,23 @@ async function runQuickAction(action: QuickAction) {
 
 function formatFocus(result: FocusSuggestion): string {
   if (!result.items || result.items.length === 0) {
-    return '📭 当前没有待办任务，享受清闲时光 ️';
+    return '当前没有待办任务，享受清闲时光。';
   }
   const lines = result.items.map((item, i) => `${i + 1}. **${item.reason}**`);
-  return `🔍 ${result.summary}\n\n${lines.join('\n')}`;
+  return `${result.summary}\n\n${lines.join('\n')}`;
 }
 
 function formatOverdue(suggestions: OverdueSuggestion[]): string {
   if (!suggestions || suggestions.length === 0) {
-    return '✅ 没有过期任务，一切尽在掌控！';
+    return '没有过期任务，一切尽在掌控！';
   }
   const labels: Record<string, string> = {
-    reschedule: '📅 重新安排',
-    abandon: '🗑️ 建议放弃',
-    decompose: '🧩 建议拆解',
+    reschedule: '重新安排',
+    abandon: '建议放弃',
+    decompose: '建议拆解',
   };
   const lines = suggestions.map(s => `- ${labels[s.action] || s.action}：${s.reason}`);
-  return ` 发现 ${suggestions.length} 个过期任务：\n\n${lines.join('\n')}`;
+  return `发现 ${suggestions.length} 个过期任务：\n\n${lines.join('\n')}`;
 }
 
 /** 是否有对话内容 */
@@ -144,7 +140,10 @@ const hasMessages = computed(() => messages.value.length > 0);
 
       <!-- 消息列表 -->
       <div v-for="(msg, idx) in messages" :key="idx" :class="['msg-row', msg.role]">
-        <div v-if="msg.role === 'assistant'" class="msg-avatar">🤖</div>
+        <svg v-if="msg.role === 'assistant'" class="msg-avatar" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8.01" y2="16"/><line x1="16" y1="16" x2="16.01" y2="16"/>
+        </svg>
         <div class="msg-bubble">
           <template v-for="(line, li) in msg.content.split('\n')" :key="li">
             <span
@@ -161,7 +160,10 @@ const hasMessages = computed(() => messages.value.length > 0);
 
       <!-- 打字指示器 -->
       <div v-if="loading" class="msg-row assistant">
-        <div class="msg-avatar">🤖</div>
+        <svg class="msg-avatar" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8.01" y2="16"/><line x1="16" y1="16" x2="16.01" y2="16"/>
+        </svg>
         <div class="msg-bubble typing">
           <span class="dot" /><span class="dot" /><span class="dot" />
         </div>
@@ -179,14 +181,22 @@ const hasMessages = computed(() => messages.value.length > 0);
           :disabled="loading"
           @click="runQuickAction(action)"
         >
-          <span class="quick-icon">{{ action.icon }}</span>
+          <svg class="quick-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path :d="action.iconPath"/>
+          </svg>
           <span>{{ action.label }}</span>
         </button>
       </div>
 
       <!-- 输入框 -->
       <div class="input-row">
-        <button class="input-plus" title="添加附件">+</button>
+        <button class="input-plus" title="添加附件">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
         <input
           v-model="inputText"
           type="text"
@@ -265,13 +275,13 @@ const hasMessages = computed(() => messages.value.length > 0);
 }
 
 .msg-avatar {
-  font-size: 20px;
   flex-shrink: 0;
   width: 32px;
   height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #999;
 }
 
 .msg-bubble {
@@ -373,10 +383,11 @@ const hasMessages = computed(() => messages.value.length > 0);
 }
 
 .quick-icon {
-  font-size: 14px;
+  flex-shrink: 0;
+  color: #999;
 }
 
-/* ── 输入框 ────────────────────── */
+/* ─ 输入框 ────────────────────── */
 
 .input-row {
   display: flex;
@@ -397,7 +408,6 @@ const hasMessages = computed(() => messages.value.length > 0);
   height: 28px;
   background: none;
   border: none;
-  font-size: 20px;
   color: #999;
   cursor: pointer;
   display: flex;
@@ -405,6 +415,7 @@ const hasMessages = computed(() => messages.value.length > 0);
   justify-content: center;
   flex-shrink: 0;
   transition: color 0.15s;
+  padding: 0;
 }
 
 .input-plus:hover {
