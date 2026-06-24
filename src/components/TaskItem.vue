@@ -5,6 +5,7 @@ import type { Task } from '../types';
 const props = defineProps<{
   task: Task;
   isDailyCompleted: boolean;
+  aiEnabled?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -13,6 +14,7 @@ const emit = defineEmits<{
   update: [id: string, title: string];
   delete: [id: string];
   updateMeta: [id: string, tags: string[], important: boolean, pinned: boolean];
+  decompose: [id: string];
 }>();
 
 const editing = ref(false);
@@ -51,7 +53,7 @@ function addMenuTag() {
 }
 
 function removeMenuTag(tag: string) {
-  menuTags.value = menuTags.value.filter(tg => tg !== tag);
+  menuTags.value = menuTags.value.filter((tg) => tg !== tag);
   emit('updateMeta', props.task.id, [...menuTags.value], props.task.important, props.task.pinned);
 }
 
@@ -85,7 +87,9 @@ function confirmEdit() {
   editing.value = false;
 }
 
-function cancelEdit() { editing.value = false; }
+function cancelEdit() {
+  editing.value = false;
+}
 
 function formatTime(isoString: string): string {
   const date = new Date(isoString);
@@ -140,11 +144,14 @@ const dueLabel = computed(() => {
 
 <template>
   <div
-    :class="['task-item', {
-      completed: displayCompleted,
-      editing: editing,
-      [dueStatus || '']: !displayCompleted && dueStatus
-    }]"
+    :class="[
+      'task-item',
+      {
+        completed: displayCompleted,
+        editing: editing,
+        [dueStatus || '']: !displayCompleted && dueStatus,
+      },
+    ]"
   >
     <input
       type="checkbox"
@@ -157,12 +164,44 @@ const dueLabel = computed(() => {
       <template v-if="!editing">
         <div class="task-title-row">
           <span :class="['task-title', { done: displayCompleted }]">{{ task.title }}</span>
-          <span v-if="task.important && !displayCompleted" class="icon-star">⭐</span>
-          <span v-if="task.is_daily" class="icon-daily" :class="{ done: displayCompleted }">☀️</span>
+          <svg
+            v-if="task.important && !displayCompleted"
+            class="icon-star"
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polygon
+              points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+            />
+          </svg>
+          <svg
+            v-if="task.is_daily"
+            class="icon-daily"
+            :class="{ done: displayCompleted }"
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="23 4 23 10 17 10" />
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+          </svg>
         </div>
         <div class="task-meta">
           <span class="task-time">{{ formatTime(task.created_at) }}</span>
-          <span v-if="dueLabel && !displayCompleted" :class="['due-badge', dueStatus]">{{ dueLabel }}</span>
+          <span v-if="dueLabel && !displayCompleted" :class="['due-badge', dueStatus]">{{
+            dueLabel
+          }}</span>
           <span v-for="tag in task.tags" :key="tag" class="tag-badge">{{ tag }}</span>
         </div>
       </template>
@@ -180,22 +219,60 @@ const dueLabel = computed(() => {
     </div>
 
     <div v-if="!editing" class="task-actions">
+      <button
+        v-if="props.aiEnabled"
+        class="task-decompose-btn"
+        title="AI 拆解为子任务"
+        @click.stop="emit('decompose', task.id)"
+      >
+        🧩
+      </button>
       <div class="menu-wrapper">
-        <button
-          class="task-menu-btn"
-          title="更多操作"
-          @click.stop="openMenu"
-        >
-          ⋯
-        </button>
+        <button class="task-menu-btn" title="更多操作" @click.stop="openMenu">⋯</button>
         <div v-if="showMenu" class="task-menu" @click.stop>
           <div class="menu-item" @click="toggleMenuImportant">
-            <span>⭐ 重要</span>
-            <span :class="['menu-toggle', { on: task.important }]">{{ task.important ? '开' : '关' }}</span>
+            <span>
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polygon
+                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                />
+              </svg>
+              重要
+            </span>
+            <span :class="['menu-toggle', { on: task.important }]">{{
+              task.important ? '开' : '关'
+            }}</span>
           </div>
           <div class="menu-item" @click="toggleMenuPinned">
-            <span>📌 置顶</span>
-            <span :class="['menu-toggle', { on: task.pinned }]">{{ task.pinned ? '开' : '关' }}</span>
+            <span>
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 17v-7" />
+                <path d="M8 10l4-4 4 4" />
+                <path d="M5 21h14" />
+              </svg>
+              置顶
+            </span>
+            <span :class="['menu-toggle', { on: task.pinned }]">{{
+              task.pinned ? '开' : '关'
+            }}</span>
           </div>
           <div class="menu-divider"></div>
           <div class="menu-tags">
@@ -219,13 +296,7 @@ const dueLabel = computed(() => {
           </div>
         </div>
       </div>
-      <button
-        class="task-delete-btn"
-        title="删除"
-        @click="emit('delete', task.id)"
-      >
-        ×
-      </button>
+      <button class="task-delete-btn" title="删除" @click="emit('delete', task.id)">×</button>
     </div>
   </div>
 </template>
@@ -234,25 +305,24 @@ const dueLabel = computed(() => {
 .task-item {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: 8px 12px;
   border-bottom: 1px solid #f0f0f0;
-  border-left: 3px solid transparent;
   transition: background 0.15s;
 }
 
-.task-item:hover { background: #f8f9fa; }
-.task-item.completed { background: #fafafa; }
-
-.task-item.overdue { border-left-color: #e74c3c; }
-.task-item.today { border-left-color: #f39c12; }
-.task-item.upcoming { border-left-color: #4a90d9; }
+.task-item:hover {
+  background: #f8f8f8;
+}
+.task-item.completed {
+  background: #fafafa;
+}
 
 .task-checkbox {
-  width: 18px;
-  height: 18px;
-  margin-right: 12px;
+  width: 16px;
+  height: 16px;
+  margin-right: 10px;
   cursor: pointer;
-  accent-color: #4a90d9;
+  accent-color: #333;
   flex-shrink: 0;
 }
 
@@ -271,56 +341,71 @@ const dueLabel = computed(() => {
 }
 
 .task-title {
-  font-size: 15px;
+  font-size: 13px;
   color: #333;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.task-title.done { text-decoration: line-through; color: #aaa; }
+.task-title.done {
+  text-decoration: line-through;
+  color: #bbb;
+}
 
-.icon-star { font-size: 13px; flex-shrink: 0; }
-.icon-daily { font-size: 13px; flex-shrink: 0; }
-.icon-daily.done { opacity: 0.4; }
+.icon-star {
+  flex-shrink: 0;
+  color: #e6a817;
+}
+.icon-daily {
+  flex-shrink: 0;
+  color: #e67e22;
+}
+.icon-daily.done {
+  opacity: 0.4;
+}
 
 .task-meta {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 3px;
+  gap: 4px;
+  margin-top: 2px;
   flex-wrap: wrap;
 }
 
 .task-time {
-  font-size: 12px;
-  color: #999;
+  font-size: 11px;
+  color: #bbb;
 }
 
 .due-badge {
-  font-size: 11px;
-  padding: 1px 6px;
-  border-radius: 4px;
+  font-size: 10px;
+  padding: 0 5px;
+  border-radius: 3px;
   font-weight: 500;
 }
 
-.due-badge.overdue { background: #fde8e8; color: #e74c3c; }
-.due-badge.today { background: #fef3e0; color: #e67e22; }
-.due-badge.upcoming { background: #e8f0fe; color: #4a90d9; }
+.due-badge.overdue {
+  color: #d44;
+}
+.due-badge.today {
+  color: #e67e22;
+}
+.due-badge.upcoming {
+  color: #888;
+}
 
 .tag-badge {
   font-size: 10px;
-  background: #f0f0f0;
-  color: #888;
-  padding: 1px 5px;
-  border-radius: 3px;
+  color: #999;
+  padding: 0 4px;
 }
 
 .task-edit-input {
-  font-size: 15px;
-  padding: 4px 8px;
-  border: 2px solid #4a90d9;
-  border-radius: 6px;
+  font-size: 13px;
+  padding: 3px 6px;
+  border: 1px solid #888;
+  border-radius: 4px;
   outline: none;
   width: 100%;
 }
@@ -329,15 +414,17 @@ const dueLabel = computed(() => {
   background: none;
   border: none;
   color: #ccc;
-  font-size: 20px;
+  font-size: 18px;
   cursor: pointer;
-  padding: 0 4px;
+  padding: 0 2px;
   line-height: 1;
   flex-shrink: 0;
   transition: color 0.15s;
 }
 
-.task-delete-btn:hover { color: #e74c3c; }
+.task-delete-btn:hover {
+  color: #d44;
+}
 
 .task-actions {
   display: flex;
@@ -354,14 +441,31 @@ const dueLabel = computed(() => {
   background: none;
   border: none;
   color: #ccc;
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
   padding: 0 2px;
   line-height: 1;
   transition: color 0.15s;
 }
 
-.task-menu-btn:hover { color: #666; }
+.task-menu-btn:hover {
+  color: #666;
+}
+
+.task-decompose-btn {
+  background: none;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+
+.task-decompose-btn:hover {
+  opacity: 1;
+}
 
 .task-menu {
   position: absolute;
@@ -369,106 +473,111 @@ const dueLabel = computed(() => {
   right: 0;
   margin-top: 4px;
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #eee;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 4px;
   z-index: 10;
-  width: 200px;
+  width: 180px;
 }
 
 .menu-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 10px;
-  border-radius: 6px;
+  padding: 6px 8px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
 }
 
-.menu-item:hover { background: #f5f5f5; }
+.menu-item:hover {
+  background: #f5f5f5;
+}
 
 .menu-toggle {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 8px;
-  background: #eee;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #f0f0f0;
   color: #999;
 }
 
 .menu-toggle.on {
-  background: #e8f0fe;
-  color: #4a90d9;
+  background: #333;
+  color: white;
 }
 
 .menu-divider {
   height: 1px;
   background: #f0f0f0;
-  margin: 4px 0;
+  margin: 2px 0;
 }
 
 .menu-tags {
-  padding: 4px 10px;
+  padding: 4px 8px;
 }
 
 .menu-tags-header {
-  font-size: 12px;
+  font-size: 11px;
   color: #999;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .menu-tags-list {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   flex-wrap: wrap;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .menu-tag-chip {
-  font-size: 11px;
-  background: #e8f0fe;
-  color: #4a90d9;
-  padding: 1px 6px;
-  border-radius: 8px;
+  font-size: 10px;
+  background: #f0f0f0;
+  color: #666;
+  padding: 1px 5px;
+  border-radius: 3px;
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
 }
 
 .menu-tag-x {
   background: none;
   border: none;
-  color: #4a90d9;
+  color: #999;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   padding: 0;
   line-height: 1;
 }
 
 .menu-tag-input-row {
   display: flex;
-  gap: 4px;
+  gap: 3px;
 }
 
 .menu-tag-input {
   flex: 1;
   min-width: 0;
-  padding: 4px 8px;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  font-size: 12px;
+  padding: 3px 6px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  font-size: 11px;
   outline: none;
 }
 
-.menu-tag-input:focus { border-color: #4a90d9; }
+.menu-tag-input:focus {
+  border-color: #888;
+}
 
 .menu-tag-add {
-  background: #4a90d9;
+  background: #333;
   color: white;
   border: none;
-  border-radius: 4px;
-  font-size: 12px;
-  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  padding: 3px 6px;
   cursor: pointer;
 }
 </style>

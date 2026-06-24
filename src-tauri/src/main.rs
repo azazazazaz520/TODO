@@ -8,6 +8,7 @@ use store::TaskStore;
 use tauri::Manager;
 use tauri_plugin_notification::NotificationExt;
 
+mod ai;
 mod store;
 
 /// 应用全局状态，由 Tauri 托管，可在所有命令中访问
@@ -31,6 +32,19 @@ struct UpdateTaskArgs {
     is_daily: bool,
 }
 
+/// 新增任务的请求参数（聚合为 struct 避免参数过多）
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AddTaskArgs {
+    title: String,
+    due_date: Option<String>,
+    tags: Option<Vec<String>>,
+    important: Option<bool>,
+    pinned: Option<bool>,
+    is_daily: Option<bool>,
+    parent_id: Option<String>,
+}
+
 // ── 任务 CRUD 命令 ──────────────────────────────
 
 /// 获取所有任务列表
@@ -41,27 +55,20 @@ fn get_tasks(state: tauri::State<AppState>) -> Vec<store::Task> {
 
 /// 新增任务
 #[tauri::command]
-fn add_task(
-    state: tauri::State<AppState>,
-    title: String,
-    due_date: Option<String>,
-    tags: Option<Vec<String>>,
-    important: Option<bool>,
-    pinned: Option<bool>,
-    is_daily: Option<bool>,
-) -> Result<store::Task, String> {
+fn add_task(state: tauri::State<AppState>, args: AddTaskArgs) -> Result<store::Task, String> {
     let mut store = state.store.lock().unwrap();
     let task = store::Task {
         id: uuid::Uuid::new_v4().to_string(),
-        title,
+        title: args.title,
         completed: false,
         created_at: chrono::Utc::now().to_rfc3339(),
         completed_at: None,
-        due_date,
-        tags: tags.unwrap_or_default(),
-        important: important.unwrap_or(false),
-        pinned: pinned.unwrap_or(false),
-        is_daily: is_daily.unwrap_or(false),
+        due_date: args.due_date,
+        tags: args.tags.unwrap_or_default(),
+        important: args.important.unwrap_or(false),
+        pinned: args.pinned.unwrap_or(false),
+        is_daily: args.is_daily.unwrap_or(false),
+        parent_id: args.parent_id,
     };
     store.tasks.push(task.clone());
     store::save_tasks(&store)?;
@@ -230,6 +237,112 @@ fn get_reminder_minutes(state: tauri::State<AppState>) -> u32 {
     state.store.lock().unwrap().reminder_minutes
 }
 
+// ── AI 设置命令 ──────────────────────────────
+
+/// 获取 AI 服务配置
+#[tauri::command]
+fn get_ai_settings(state: tauri::State<AppState>) -> store::AiSettings {
+    state.store.lock().unwrap().ai_settings.clone()
+}
+
+/// 更新 AI 服务配置（持久化到 tasks.json）
+#[tauri::command]
+fn set_ai_settings(
+    state: tauri::State<AppState>,
+    settings: store::AiSettings,
+) -> Result<(), String> {
+    let mut store = state.store.lock().unwrap();
+    store.ai_settings = settings;
+    store::save_tasks(&store)
+}
+
+// ── AI 功能命令 ──────────────────────────────
+
+/// 自然语言解析输入
+#[tauri::command]
+async fn ai_parse_input(
+    state: tauri::State<'_, AppState>,
+    text: String,
+) -> Result<ai::ParsedTask, String> {
+    let (settings, existing_tags) = {
+        let store = state.store.lock().unwrap();
+        let settings = store.ai_settings.clone();
+        let existing_tags: Vec<String> = store.tasks.iter().flat_map(|t| t.tags.clone()).collect();
+        (settings, existing_tags)
+    };
+    ai::parse_input(&settings, &text, &existing_tags).await
+}
+
+/// 今日聚焦建议
+#[tauri::command]
+async fn ai_daily_focus(state: tauri::State<'_, AppState>) -> Result<ai::FocusSuggestion, String> {
+    let (settings, tasks) = {
+        let store = state.store.lock().unwrap();
+        let settings = store.ai_settings.clone();
+        let tasks = store.tasks.clone();
+        (settings, tasks)
+    };
+    ai::daily_focus(&settings, &tasks).await
+}
+
+/// 任务智能拆解
+#[tauri::command]
+async fn ai_decompose(
+    state: tauri::State<'_, AppState>,
+    task_id: String,
+) -> Result<Vec<ai::SubTask>, String> {
+    let (settings, task_title, existing_subtasks) = {
+        let store = state.store.lock().unwrap();
+        let settings = store.ai_settings.clone();
+        let task_title = store
+            .tasks
+            .iter()
+            .find(|t| t.id == task_id)
+            .map(|t| t.title.clone())
+            .ok_or("任务不存在")?;
+        let existing_subtasks: Vec<String> = store
+            .tasks
+            .iter()
+            .filter(|t| t.parent_id.as_deref() == Some(&task_id))
+            .map(|t| t.title.clone())
+            .collect();
+        (settings, task_title, existing_subtasks)
+    };
+    ai::decompose(&settings, &task_title, &existing_subtasks).await
+}
+
+/// 过期任务处理建议
+#[tauri::command]
+async fn ai_overdue_suggest(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<ai::OverdueSuggestion>, String> {
+    let (settings, overdue) = {
+        let store = state.store.lock().unwrap();
+        let settings = store.ai_settings.clone();
+        let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+        let overdue: Vec<store::Task> = store
+            .tasks
+            .iter()
+            .filter(|t| !t.completed && t.due_date.as_deref().is_some_and(|d| d < today.as_str()))
+            .cloned()
+            .collect();
+        (settings, overdue)
+    };
+    ai::overdue_suggest(&settings, &overdue).await
+}
+
+/// AI 助手自由对话
+#[tauri::command]
+async fn ai_chat(state: tauri::State<'_, AppState>, message: String) -> Result<String, String> {
+    let (settings, tasks) = {
+        let store = state.store.lock().unwrap();
+        let settings = store.ai_settings.clone();
+        let tasks = store.tasks.clone();
+        (settings, tasks)
+    };
+    ai::chat(&settings, &message, &tasks).await
+}
+
 /// 应用入口：初始化存储、注册命令、启动后台提醒线程
 fn main() {
     let store = store::load_tasks();
@@ -254,8 +367,15 @@ fn main() {
             get_daily_completions,
             set_reminder_minutes,
             get_reminder_minutes,
+            get_ai_settings,
+            set_ai_settings,
             show_floating_window,
             show_main_window,
+            ai_parse_input,
+            ai_daily_focus,
+            ai_decompose,
+            ai_overdue_suggest,
+            ai_chat,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

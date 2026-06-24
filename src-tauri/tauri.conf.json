@@ -14,8 +14,10 @@
       {
         "label": "main",
         "title": "TODO",
-        "width": 480,
-        "height": 640,
+        "width": 780,
+        "height": 600,
+        "minWidth": 600,
+        "minHeight": 480,
         "resizable": true
       },
       {
@@ -40,10 +42,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": [
-      "icons/icon.ico",
-      "icons/icon.png"
-    ],
+    "icon": ["icons/icon.ico", "icons/icon.png"],
     "windows": {
       "wix": {
         "language": "zh-CN"

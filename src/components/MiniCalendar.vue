@@ -18,7 +18,7 @@ const currentMonth = ref(today.getMonth());
 const weekDays = ['一', '二', '三', '四', '五', '六', '日'];
 
 const daysInMonth = computed(() =>
-  new Date(currentYear.value, currentMonth.value + 1, 0).getDate()
+  new Date(currentYear.value, currentMonth.value + 1, 0).getDate(),
 );
 
 const firstDayOfWeek = computed(() => {
@@ -48,13 +48,17 @@ function dateKey(day: number): string {
 }
 
 function prevMonth() {
-  if (currentMonth.value === 0) { currentMonth.value = 11; currentYear.value--; }
-  else currentMonth.value--;
+  if (currentMonth.value === 0) {
+    currentMonth.value = 11;
+    currentYear.value--;
+  } else currentMonth.value--;
 }
 
 function nextMonth() {
-  if (currentMonth.value === 11) { currentMonth.value = 0; currentYear.value++; }
-  else currentMonth.value++;
+  if (currentMonth.value === 11) {
+    currentMonth.value = 0;
+    currentYear.value++;
+  } else currentMonth.value++;
 }
 
 function selectDay(day: number) {
@@ -69,9 +73,11 @@ function selectDay(day: number) {
 }
 
 function isToday(day: number): boolean {
-  return currentYear.value === today.getFullYear() &&
+  return (
+    currentYear.value === today.getFullYear() &&
     currentMonth.value === today.getMonth() &&
-    day === today.getDate();
+    day === today.getDate()
+  );
 }
 
 function isSelected(day: number): boolean {
@@ -99,8 +105,8 @@ function isSelected(day: number): boolean {
             empty: cell === null,
             today: cell !== null && isToday(cell),
             selected: cell !== null && isSelected(cell),
-            'has-task': cell !== null && datesWithTasks.has(dateKey(cell))
-          }
+            'has-task': cell !== null && datesWithTasks.has(dateKey(cell)),
+          },
         ]"
         :disabled="cell === null"
         @click="cell !== null && selectDay(cell)"
@@ -114,21 +120,20 @@ function isSelected(day: number): boolean {
 <style scoped>
 .mini-calendar {
   background: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  padding: 12px 16px;
-  margin-bottom: 16px;
+  border-radius: 8px;
+  border: 1px solid #eee;
+  padding: 8px 10px;
 }
 
 .mc-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .mc-month {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   color: #333;
 }
@@ -136,42 +141,44 @@ function isSelected(day: number): boolean {
 .mc-nav {
   background: none;
   border: none;
-  font-size: 14px;
+  font-size: 12px;
   cursor: pointer;
   color: #888;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 1px 6px;
+  border-radius: 3px;
 }
 
-.mc-nav:hover { background: #f0f0f0; }
+.mc-nav:hover {
+  background: #f0f0f0;
+}
 
 .mc-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-  margin-bottom: 2px;
+  gap: 1px;
+  margin-bottom: 1px;
 }
 
 .mc-wd {
   text-align: center;
-  font-size: 11px;
+  font-size: 10px;
   color: #aaa;
-  padding: 2px 0;
+  padding: 1px 0;
 }
 
 .mc-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  gap: 1px;
 }
 
 .mc-day {
   aspect-ratio: 1;
   border: none;
   background: none;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   color: #333;
   display: flex;
   align-items: center;
@@ -179,9 +186,13 @@ function isSelected(day: number): boolean {
   position: relative;
 }
 
-.mc-day.empty { cursor: default; }
+.mc-day.empty {
+  cursor: default;
+}
 
-.mc-day:hover:not(.empty) { background: #e8f0fe; }
+.mc-day:hover:not(.empty) {
+  background: #e8f0fe;
+}
 
 .mc-day.today {
   font-weight: 700;
@@ -196,9 +207,9 @@ function isSelected(day: number): boolean {
 .mc-day.has-task::after {
   content: '';
   position: absolute;
-  bottom: 2px;
-  width: 4px;
-  height: 4px;
+  bottom: 1px;
+  width: 3px;
+  height: 3px;
   border-radius: 50%;
   background: #4a90d9;
 }

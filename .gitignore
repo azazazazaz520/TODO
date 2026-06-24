@@ -38,3 +38,7 @@ npm-debug.log*
 .mcp.json
 .codegraph/
 docs/
+.agents/
+skills-lock.json
+AGENTS.md
+vision.js

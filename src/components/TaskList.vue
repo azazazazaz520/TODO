@@ -6,6 +6,7 @@ import TaskItem from './TaskItem.vue';
 const props = defineProps<{
   tasks: Task[];
   dailyCompletionsMap: Record<string, boolean>;
+  aiEnabled?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -14,6 +15,7 @@ const emit = defineEmits<{
   update: [id: string, title: string];
   delete: [id: string];
   updateMeta: [id: string, tags: string[], important: boolean, pinned: boolean];
+  decompose: [id: string];
 }>();
 
 const sortedTasks = computed(() => {
@@ -27,41 +29,66 @@ const sortedTasks = computed(() => {
   return arr;
 });
 
-const pinnedTasks = computed(() => sortedTasks.value.filter(t => t.pinned && !t.completed));
-const normalTasks = computed(() => sortedTasks.value.filter(t => !t.pinned || t.completed));
+const pinnedTasks = computed(() => sortedTasks.value.filter((t) => t.pinned && !t.completed));
+const normalTasks = computed(() => sortedTasks.value.filter((t) => !t.pinned || t.completed));
 </script>
 
 <template>
   <div class="task-list">
-    <div v-if="tasks.length === 0" class="task-empty">
-      暂无任务，添加一个吧
-    </div>
+    <div v-if="tasks.length === 0" class="task-empty">暂无任务，添加一个吧</div>
     <template v-else>
       <div v-if="pinnedTasks.length > 0" class="pinned-section">
-        <div class="pinned-header">📌 已置顶</div>
+        <div class="pinned-header">
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 17v-7" />
+            <path d="M8 10l4-4 4 4" />
+            <path d="M5 21h14" />
+          </svg>
+          已置顶
+        </div>
         <TaskItem
           v-for="task in pinnedTasks"
           :key="task.id"
           :task="task"
           :is-daily-completed="dailyCompletionsMap[task.id] ?? false"
+          :ai-enabled="props.aiEnabled"
           @toggle="(id) => emit('toggle', id)"
           @toggle-daily="(id, date) => emit('toggleDaily', id, date)"
           @update="(id, title) => emit('update', id, title)"
           @delete="(id) => emit('delete', id)"
-          @update-meta="(id, tags, important, pinned) => emit('updateMeta', id, tags, important, pinned)"
+          @update-meta="
+            (id, tags, important, pinned) => emit('updateMeta', id, tags, important, pinned)
+          "
+          @decompose="(id) => emit('decompose', id)"
         />
       </div>
-      <div v-if="pinnedTasks.length > 0 && normalTasks.filter(t => !t.completed).length > 0" class="section-divider"></div>
+      <div
+        v-if="pinnedTasks.length > 0 && normalTasks.filter((t) => !t.completed).length > 0"
+        class="section-divider"
+      ></div>
       <TaskItem
         v-for="task in normalTasks"
         :key="task.id"
         :task="task"
         :is-daily-completed="dailyCompletionsMap[task.id] ?? false"
+        :ai-enabled="props.aiEnabled"
         @toggle="(id) => emit('toggle', id)"
         @toggle-daily="(id, date) => emit('toggleDaily', id, date)"
         @update="(id, title) => emit('update', id, title)"
         @delete="(id) => emit('delete', id)"
-        @update-meta="(id, tags, important, pinned) => emit('updateMeta', id, tags, important, pinned)"
+        @update-meta="
+          (id, tags, important, pinned) => emit('updateMeta', id, tags, important, pinned)
+        "
+        @decompose="(id) => emit('decompose', id)"
       />
     </template>
   </div>
@@ -70,28 +97,30 @@ const normalTasks = computed(() => sortedTasks.value.filter(t => !t.pinned || t.
 <style scoped>
 .task-list {
   background: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #eee;
+  border-radius: 6px;
 }
 
 .task-empty {
-  padding: 40px 20px;
+  padding: 32px 16px;
   text-align: center;
-  color: #bbb;
-  font-size: 15px;
+  color: #ccc;
+  font-size: 13px;
 }
 
 .pinned-section {
-  background: #fffdf5;
+  background: #fafafa;
 }
 
 .pinned-header {
-  padding: 8px 16px;
-  font-size: 12px;
+  padding: 6px 12px;
+  font-size: 11px;
   font-weight: 600;
-  color: #b7950b;
-  background: #fef9e7;
-  border-bottom: 1px solid #f0c060;
+  color: #999;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .section-divider {
