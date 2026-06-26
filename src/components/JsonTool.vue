@@ -1,9 +1,13 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
+
+const props = defineProps<{ aiEnabled?: boolean }>();
 
 const input = ref('');
 const output = ref('');
 const copied = ref(false);
+const aiLoading = ref(false);
 
 function handleInput(val: string) {
   input.value = val;
@@ -45,6 +49,18 @@ async function copy() {
   copied.value = true;
   setTimeout(() => (copied.value = false), 1500);
 }
+
+async function aiExplain() {
+  if (!input.value) return;
+  aiLoading.value = true;
+  try {
+    output.value = await invoke<string>('ai_json_explain', { jsonText: input.value });
+  } catch (e: any) {
+    output.value = 'AI 调用失败: ' + e;
+  } finally {
+    aiLoading.value = false;
+  }
+}
 </script>
 
 <template>
@@ -55,12 +71,20 @@ async function copy() {
       @input="handleInput(($event.target as HTMLTextAreaElement).value)"
       placeholder='粘贴 JSON，如 {"name":"test"}'
       spellcheck="false"
-    />
+    ></textarea>
     <div class="tool-actions">
       <button class="btn btn-primary" @click="format">格式化</button>
       <button class="btn" @click="minify">压缩</button>
       <button class="btn" @click="validate">校验</button>
       <button class="btn" @click="copy">复制</button>
+      <button
+        class="btn btn-ai"
+        :disabled="!props.aiEnabled || aiLoading"
+        :title="props.aiEnabled ? '' : '请先配置 AI 供应商'"
+        @click="aiExplain"
+      >
+        {{ aiLoading ? '分析中...' : 'AI 解释' }}
+      </button>
       <span v-if="copied" class="copied-hint">已复制</span>
     </div>
     <pre class="tool-output">{{ output || '等待输入...' }}</pre>
@@ -121,6 +145,23 @@ async function copy() {
 
 .btn-primary:hover {
   background: var(--accent-hover);
+}
+
+.btn-ai {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-color: var(--accent-muted);
+  font-weight: 500;
+}
+
+.btn-ai:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-ai:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .copied-hint {

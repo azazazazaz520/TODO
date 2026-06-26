@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
+
+const props = defineProps<{ aiEnabled?: boolean }>();
 
 const pattern = ref('');
 const text = ref('');
 const flags = ref(['g']);
 const copied = ref(false);
+const aiLoading = ref(false);
 
 const result = computed(() => {
   if (!pattern.value) return '';
@@ -22,6 +26,19 @@ async function copy() {
   await navigator.clipboard.writeText(result.value);
   copied.value = true;
   setTimeout(() => (copied.value = false), 1500);
+}
+
+async function aiGenerate() {
+  const desc = pattern.value.trim();
+  if (!desc) return;
+  aiLoading.value = true;
+  try {
+    pattern.value = await invoke<string>('ai_regex_generate', { description: desc });
+  } catch (e: any) {
+    pattern.value = '// Error: ' + e;
+  } finally {
+    aiLoading.value = false;
+  }
 }
 </script>
 
@@ -41,6 +58,14 @@ async function copy() {
     <textarea class="tool-input" v-model="text" placeholder="测试文本" spellcheck="false" />
     <div class="tool-actions">
       <button class="btn" @click="copy">复制结果</button>
+      <button
+        class="btn btn-ai"
+        :disabled="!props.aiEnabled || aiLoading"
+        :title="props.aiEnabled ? '' : '请先配置 AI 供应商'"
+        @click="aiGenerate"
+      >
+        {{ aiLoading ? '生成中...' : 'AI 生成' }}
+      </button>
       <span v-if="copied" class="copied-hint">已复制</span>
     </div>
     <pre class="tool-output">{{ result || '等待输入...' }}</pre>
@@ -101,6 +126,20 @@ async function copy() {
 }
 .btn:hover {
   background: var(--bg-hover);
+}
+.btn-ai {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-color: var(--accent-muted);
+  font-weight: 500;
+}
+.btn-ai:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-ai:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .copied-hint {
   font-size: var(--text-xs);

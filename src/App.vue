@@ -352,7 +352,7 @@ function handleSwitchModule(module: AppModule) {
           key="devtools"
           class="module-devtools"
         >
-          <Toolbox />
+          <Toolbox :ai-enabled="aiEnabled" />
         </div>
 
         <!-- 设置模块 -->

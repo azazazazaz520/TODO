@@ -8,6 +8,8 @@ import TimestampTool from './TimestampTool.vue';
 import UuidTool from './UuidTool.vue';
 import ColorTool from './ColorTool.vue';
 
+const props = defineProps<{ aiEnabled?: boolean }>();
+
 interface ToolDef {
   id: string;
   name: string;
@@ -126,8 +128,8 @@ function back() {
     <!-- Tool view -->
     <template v-else>
       <ToolShell :title="activeToolDef?.name ?? ''" @back="back">
-        <JsonTool v-if="activeTool === 'json'" />
-        <RegexTool v-else-if="activeTool === 'regex'" />
+        <JsonTool v-if="activeTool === 'json'" :ai-enabled="props.aiEnabled" />
+        <RegexTool v-else-if="activeTool === 'regex'" :ai-enabled="props.aiEnabled" />
         <Base64Tool v-else-if="activeTool === 'base64'" />
         <TimestampTool v-else-if="activeTool === 'timestamp'" />
         <UuidTool v-else-if="activeTool === 'uuid'" />

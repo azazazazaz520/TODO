@@ -11,6 +11,8 @@ pub const DAILY_FOCUS: &str = "daily-focus.md";
 pub const DECOMPOSE: &str = "decompose.md";
 pub const OVERDUE_SUGGEST: &str = "overdue-suggest.md";
 pub const CHAT: &str = "chat.md";
+pub const JSON_EXPLAIN: &str = "json-explain.md";
+pub const REGEX_GENERATE: &str = "regex-generate.md";
 
 // ═══════════════════════════════════════════════════════════════
 //  编译时内嵌默认 prompt（文件缺失时回退）
@@ -80,6 +82,27 @@ const DEFAULT_CHAT: &str = "\
 以下是用户当前的任务数据（仅标题和截止日期）：
 {{context}}";
 
+const DEFAULT_JSON_EXPLAIN: &str = "\
+# JSON 结构解释
+
+你是一个数据结构分析助手。用户会提供一段 JSON 文本，请分析其结构并以自然语言解释：
+
+1. 顶层字段含义和数据类型
+2. 嵌套结构（数组/对象）的用途
+3. 可能的 API 或业务场景
+
+请用中文简洁回答，不超过 200 字。";
+
+const DEFAULT_REGEX_GENERATE: &str = "\
+# 正则表达式生成
+
+你是一个正则表达式生成助手。用户会用自然语言描述一个字符串匹配规则，请生成对应的正则表达式。
+
+规则：
+- 只输出正则表达式本身，不要加引号、markdown 代码块或任何解释文字
+- 优先使用 JavaScript/ECMAScript 兼容的语法
+- 如果用户描述模糊，选择最常见、最实用的匹配方式";
+
 // ═══════════════════════════════════════════════════════════════
 //  加载与渲染
 // ═══════════════════════════════════════════════════════════════
@@ -91,6 +114,8 @@ fn get_default(name: &str) -> &'static str {
         DECOMPOSE => DEFAULT_DECOMPOSE,
         OVERDUE_SUGGEST => DEFAULT_OVERDUE_SUGGEST,
         CHAT => DEFAULT_CHAT,
+        JSON_EXPLAIN => DEFAULT_JSON_EXPLAIN,
+        REGEX_GENERATE => DEFAULT_REGEX_GENERATE,
         _ => "",
     }
 }
@@ -122,6 +147,8 @@ pub fn create_defaults() {
         (DECOMPOSE, DEFAULT_DECOMPOSE),
         (OVERDUE_SUGGEST, DEFAULT_OVERDUE_SUGGEST),
         (CHAT, DEFAULT_CHAT),
+        (JSON_EXPLAIN, DEFAULT_JSON_EXPLAIN),
+        (REGEX_GENERATE, DEFAULT_REGEX_GENERATE),
     ];
     for (name, content) in defaults {
         let path = dir.join(name);
@@ -200,6 +227,8 @@ mod tests {
         assert!(!get_default(DECOMPOSE).is_empty());
         assert!(!get_default(OVERDUE_SUGGEST).is_empty());
         assert!(!get_default(CHAT).is_empty());
+        assert!(!get_default(JSON_EXPLAIN).is_empty());
+        assert!(!get_default(REGEX_GENERATE).is_empty());
     }
 
     #[test]

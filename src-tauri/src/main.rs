@@ -438,6 +438,32 @@ async fn ai_chat(state: tauri::State<'_, AppState>, message: String) -> Result<S
     ai::chat(&settings, &message, &tasks).await
 }
 
+/// AI 解释 JSON 结构
+#[tauri::command]
+async fn ai_json_explain(
+    state: tauri::State<'_, AppState>,
+    json_text: String,
+) -> Result<String, String> {
+    let settings = {
+        let config = state.config.lock().unwrap();
+        resolve_ai_settings(&config)?
+    };
+    ai::json_explain(&settings, &json_text).await
+}
+
+/// AI 生成正则表达式
+#[tauri::command]
+async fn ai_regex_generate(
+    state: tauri::State<'_, AppState>,
+    description: String,
+) -> Result<String, String> {
+    let settings = {
+        let config = state.config.lock().unwrap();
+        resolve_ai_settings(&config)?
+    };
+    ai::regex_generate(&settings, &description).await
+}
+
 /// 获取当前主题设置
 #[tauri::command]
 fn get_theme(state: tauri::State<AppState>) -> String {
@@ -524,6 +550,8 @@ fn main() {
             ai_decompose,
             ai_overdue_suggest,
             ai_chat,
+            ai_json_explain,
+            ai_regex_generate,
         ])
         .setup(|app| {
             let handle = app.handle().clone();
