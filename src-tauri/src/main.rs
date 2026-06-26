@@ -451,6 +451,26 @@ fn set_theme(state: tauri::State<AppState>, theme: String) -> Result<(), String>
     store::save_config(&config)
 }
 
+// ── 模块配置命令 ──────────────────────────────
+
+/// 获取所有模块的启用状态
+#[tauri::command]
+fn get_module_enabled(state: tauri::State<AppState>) -> std::collections::HashMap<String, bool> {
+    state.config.lock().unwrap().module_enabled.clone()
+}
+
+/// 设置单个模块的启用状态
+#[tauri::command]
+fn set_module_enabled(
+    state: tauri::State<AppState>,
+    module_id: String,
+    enabled: bool,
+) -> Result<(), String> {
+    let mut config = state.config.lock().unwrap();
+    config.module_enabled.insert(module_id, enabled);
+    store::save_config(&config)
+}
+
 /// 应用入口：初始化存储、注册命令、启动后台提醒线程
 fn main() {
     let (data, config) = store::initialize();
@@ -485,6 +505,8 @@ fn main() {
             set_active_vendor,
             get_theme,
             set_theme,
+            get_module_enabled,
+            set_module_enabled,
             show_floating_window,
             show_main_window,
             ai_parse_input,

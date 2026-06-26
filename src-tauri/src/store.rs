@@ -81,6 +81,10 @@ pub struct ConfigStore {
     pub theme: String,
     #[serde(default = "default_reminder_minutes")]
     pub reminder_minutes: u32,
+    /// 模块启用状态（key=AppModule id, value=enabled）
+    /// 模块不在 map 中时默认启用
+    #[serde(default)]
+    pub module_enabled: std::collections::HashMap<String, bool>,
 }
 
 /// 旧版单文件格式（仅用于迁移）
@@ -166,6 +170,7 @@ fn default_config_store() -> ConfigStore {
         active_vendor_id: None,
         theme: default_theme(),
         reminder_minutes: default_reminder_minutes(),
+        module_enabled: std::collections::HashMap::new(),
     }
 }
 
@@ -227,6 +232,7 @@ pub fn migrate_legacy() -> Result<(), String> {
         active_vendor_id: legacy.active_vendor_id,
         theme: legacy.theme,
         reminder_minutes: legacy.reminder_minutes,
+        module_enabled: std::collections::HashMap::new(),
     };
     save_config(&config)?;
 
@@ -351,6 +357,7 @@ mod tests {
             active_vendor_id: Some("v1".to_string()),
             theme: "dark".to_string(),
             reminder_minutes: 15,
+            module_enabled: std::collections::HashMap::new(),
         };
         let json = serde_json::to_string(&config).unwrap();
         let parsed: ConfigStore = serde_json::from_str(&json).unwrap();
@@ -424,6 +431,7 @@ mod tests {
                 active_vendor_id: legacy.active_vendor_id,
                 theme: legacy.theme,
                 reminder_minutes: legacy.reminder_minutes,
+                module_enabled: std::collections::HashMap::new(),
             };
 
             // 验证序列化可正常进行

@@ -3,9 +3,11 @@ import { ref, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import type { SettingsSubModule } from '../types';
 import { useTheme, type ThemeMode } from '../composables/useTheme';
+import { useModuleRegistry } from '../composables/useModuleRegistry';
 import VendorList from './VendorList.vue';
 
 const { theme, setTheme } = useTheme();
+const { allModules, isEnabled, toggle: toggleModule } = useModuleRegistry();
 
 const activeSub = ref<SettingsSubModule>('preferences');
 
@@ -98,6 +100,23 @@ const subModules: { key: SettingsSubModule; label: string }[] = [
                 <option value="light">浅色</option>
                 <option value="dark">深色</option>
               </select>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="group-title">模块</div>
+            <div
+              v-for="m in allModules.filter((m) => m.id !== 'settings')"
+              :key="m.id"
+              class="setting-row"
+            >
+              <label>{{ m.label }}</label>
+              <button
+                :class="['toggle-btn', { on: isEnabled(m.id) }]"
+                @click="toggleModule(m.id, !isEnabled(m.id))"
+              >
+                <span class="toggle-knob" />
+              </button>
             </div>
           </div>
 
@@ -282,5 +301,38 @@ const subModules: { key: SettingsSubModule; label: string }[] = [
 }
 .theme-select:focus {
   border-color: var(--accent);
+}
+
+/* 模块开关按钮 */
+.toggle-btn {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  border: none;
+  background: var(--gray-300);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  padding: 0;
+}
+
+.toggle-btn.on {
+  background: var(--accent);
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform var(--transition-fast);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.toggle-btn.on .toggle-knob {
+  transform: translateX(20px);
 }
 </style>

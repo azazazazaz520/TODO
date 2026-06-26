@@ -1,0 +1,93 @@
+import { ref, computed, onMounted } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
+import type { AppModule, ModuleDescriptor } from '../types';
+
+/** 完整模块注册表（所有可用模块的元数据定义） */
+const ALL_MODULES: ModuleDescriptor[] = [
+  {
+    id: 'tasks',
+    label: '任务看板',
+    iconPath: 'M3 6h18M7 12h10M10 18h4',
+  },
+  {
+    id: 'ai-assistant',
+    label: 'AI 助手',
+    iconPath:
+      'M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z',
+  },
+  {
+    id: 'calendar',
+    label: '日历视图',
+    iconPath: 'M3 4h18v18H3V4zm13-2v4M8 2v4M3 10h18',
+  },
+  {
+    id: 'floating',
+    label: '悬浮窗',
+    iconPath: 'M4 4h16v16H4V4zm4 4h8v8H8V8z',
+    isAction: true,
+  },
+  {
+    id: 'settings',
+    label: '设置',
+    iconPath:
+      'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z',
+  },
+];
+
+/** 模块注册表 composable：管理模块列表、启用状态、开关 */
+export function useModuleRegistry() {
+  /** 模块启用状态（key=moduleId, value=enabled） */
+  const enabledMap = ref<Record<string, boolean>>({});
+
+  /** 判断模块是否启用（不在 map 中或值为 true 视为启用） */
+  function isEnabled(id: string): boolean {
+    return enabledMap.value[id] !== false;
+  }
+
+  /** 可导航的视图模块（排除 isAction） */
+  const viewModules = computed(() => ALL_MODULES.filter((m) => !m.isAction && isEnabled(m.id)));
+
+  /** 动作模块（悬浮窗） */
+  const actionModules = computed(() => ALL_MODULES.filter((m) => m.isAction && isEnabled(m.id)));
+
+  /** 侧边栏顶部模块：view 中排除 settings */
+  const topModules = computed(() => viewModules.value.filter((m) => m.id !== 'settings'));
+
+  /** 侧边栏底部模块：仅 settings */
+  const bottomModules = computed(() => viewModules.value.filter((m) => m.id === 'settings'));
+
+  /** 所有模块（用于设置面板开关） */
+  const allModules = computed(() => ALL_MODULES);
+
+  /** 从后端加载模块启用状态 */
+  async function load() {
+    try {
+      enabledMap.value = await invoke<Record<string, boolean>>('get_module_enabled');
+    } catch {
+      // 首次运行使用默认值（全部启用）
+    }
+  }
+
+  /** 切换模块启用状态并持久化 */
+  async function toggle(moduleId: AppModule, enabled: boolean) {
+    enabledMap.value[moduleId] = enabled;
+    try {
+      await invoke('set_module_enabled', { moduleId, enabled });
+    } catch (e) {
+      console.error('保存模块开关失败:', e);
+    }
+  }
+
+  onMounted(load);
+
+  return {
+    allModules,
+    viewModules,
+    actionModules,
+    topModules,
+    bottomModules,
+    isEnabled,
+    load,
+    toggle,
+  };
+}

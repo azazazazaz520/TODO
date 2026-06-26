@@ -12,6 +12,11 @@ import TagFilterBar from './components/TagFilterBar.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
 import AiFocusBar from './components/AiFocusBar.vue';
 import AiAssistant from './components/AiAssistant.vue';
+import { useModuleRegistry } from './composables/useModuleRegistry';
+
+// ── 模块注册表 ──────────────────────────────
+
+const { topModules, bottomModules, actionModules, isEnabled } = useModuleRegistry();
 
 // ── 全局状态 ──────────────────────────────
 
@@ -243,12 +248,14 @@ function handleAddTag(tag: string) {
 
 // ── 模块切换 ──────────────────────────────
 
-/** 处理侧边栏模块切换，悬浮窗直接触发动作而非切换视图 */
+/** 处理侧边栏模块切换，动作模块（悬浮窗）直接触发而非切换视图 */
 function handleSwitchModule(module: AppModule) {
   if (module === 'floating') {
     invoke('show_floating_window');
     return;
   }
+  // 禁用的模块不允许切换
+  if (!isEnabled(module)) return;
   activeModule.value = module;
 }
 </script>
@@ -258,7 +265,9 @@ function handleSwitchModule(module: AppModule) {
     <!-- 侧边栏导航 -->
     <Sidebar
       :active-module="activeModule"
-      :ai-enabled="aiEnabled"
+      :top-modules="topModules"
+      :bottom-modules="bottomModules"
+      :action-modules="actionModules"
       @switch-module="handleSwitchModule"
     />
 
@@ -266,7 +275,7 @@ function handleSwitchModule(module: AppModule) {
     <main class="main-content">
       <Transition name="module-fade" mode="out-in">
         <!-- 任务看板模块 -->
-        <div v-if="activeModule === 'tasks'" key="tasks" class="module-tasks">
+        <div v-if="activeModule === 'tasks' && isEnabled('tasks')" key="tasks" class="module-tasks">
           <div class="module-header">
             <div>
               <h2 class="module-title">任务看板</h2>
@@ -309,12 +318,20 @@ function handleSwitchModule(module: AppModule) {
         </div>
 
         <!-- AI 助手模块（Phase 4） -->
-        <div v-else-if="activeModule === 'ai-assistant'" key="ai" class="module-ai">
+        <div
+          v-else-if="activeModule === 'ai-assistant' && isEnabled('ai-assistant')"
+          key="ai"
+          class="module-ai"
+        >
           <AiAssistant />
         </div>
 
         <!-- 日历视图模块（Phase 5 实现） -->
-        <div v-else-if="activeModule === 'calendar'" key="calendar" class="module-placeholder">
+        <div
+          v-else-if="activeModule === 'calendar' && isEnabled('calendar')"
+          key="calendar"
+          class="module-placeholder"
+        >
           <h2 class="module-title">日历视图</h2>
           <p class="placeholder-text">日历视图功能将在 Phase 5 中实现</p>
         </div>
