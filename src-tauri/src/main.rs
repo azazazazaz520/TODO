@@ -8,6 +8,7 @@ use tauri::Manager;
 use tauri_plugin_notification::NotificationExt;
 
 mod ai;
+mod notes;
 mod prompt;
 mod store;
 
@@ -507,6 +508,12 @@ fn main() {
             set_theme,
             get_module_enabled,
             set_module_enabled,
+            notes::list_note_tree,
+            notes::read_note,
+            notes::write_note,
+            notes::create_note_dir,
+            notes::delete_note_entry,
+            notes::rename_note_entry,
             show_floating_window,
             show_main_window,
             ai_parse_input,

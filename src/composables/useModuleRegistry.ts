@@ -21,6 +21,11 @@ const ALL_MODULES: ModuleDescriptor[] = [
     iconPath: 'M3 4h18v18H3V4zm13-2v4M8 2v4M3 10h18',
   },
   {
+    id: 'notes',
+    label: '笔记',
+    iconPath: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M16 13H8M16 17H8',
+  },
+  {
     id: 'floating',
     label: '悬浮窗',
     iconPath: 'M4 4h16v16H4V4zm4 4h8v8H8V8z',

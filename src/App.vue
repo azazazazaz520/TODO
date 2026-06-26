@@ -12,6 +12,7 @@ import TagFilterBar from './components/TagFilterBar.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
 import AiFocusBar from './components/AiFocusBar.vue';
 import AiAssistant from './components/AiAssistant.vue';
+import NoteEditor from './components/NoteEditor.vue';
 import { useModuleRegistry } from './composables/useModuleRegistry';
 
 // ── 模块注册表 ──────────────────────────────
@@ -326,7 +327,7 @@ function handleSwitchModule(module: AppModule) {
           <AiAssistant />
         </div>
 
-        <!-- 日历视图模块（Phase 5 实现） -->
+        <!-- 日历视图模块 -->
         <div
           v-else-if="activeModule === 'calendar' && isEnabled('calendar')"
           key="calendar"
@@ -334,6 +335,15 @@ function handleSwitchModule(module: AppModule) {
         >
           <h2 class="module-title">日历视图</h2>
           <p class="placeholder-text">日历视图功能将在 Phase 5 中实现</p>
+        </div>
+
+        <!-- 笔记模块 -->
+        <div
+          v-else-if="activeModule === 'notes' && isEnabled('notes')"
+          key="notes"
+          class="module-notes"
+        >
+          <NoteEditor />
         </div>
 
         <!-- 设置模块 -->
