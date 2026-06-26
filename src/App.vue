@@ -13,6 +13,7 @@ import SettingsPanel from './components/SettingsPanel.vue';
 import AiFocusBar from './components/AiFocusBar.vue';
 import AiAssistant from './components/AiAssistant.vue';
 import NoteEditor from './components/NoteEditor.vue';
+import Toolbox from './components/Toolbox.vue';
 import { useModuleRegistry } from './composables/useModuleRegistry';
 
 // ── 模块注册表 ──────────────────────────────
@@ -346,6 +347,14 @@ function handleSwitchModule(module: AppModule) {
           <NoteEditor />
         </div>
 
+        <div
+          v-else-if="activeModule === 'devtools' && isEnabled('devtools')"
+          key="devtools"
+          class="module-devtools"
+        >
+          <Toolbox />
+        </div>
+
         <!-- 设置模块 -->
         <div v-else key="settings" class="module-settings">
           <SettingsPanel />
@@ -377,7 +386,8 @@ function handleSwitchModule(module: AppModule) {
 .module-settings,
 .module-placeholder,
 .module-ai,
-.module-notes {
+.module-notes,
+.module-devtools {
   flex: 1;
   display: flex;
   flex-direction: column;
