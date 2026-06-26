@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import type { AppModule, Vendor } from './types';
+import type { AppModule } from './types';
 import Sidebar from './components/Sidebar.vue';
 import TaskInput from './components/TaskInput.vue';
 import TaskList from './components/TaskList.vue';
@@ -16,6 +16,7 @@ import NoteEditor from './components/NoteEditor.vue';
 import Toolbox from './components/Toolbox.vue';
 import { useModuleRegistry } from './composables/useModuleRegistry';
 import { useTaskStore } from './composables/useTaskStore';
+import { useAiStatus } from './composables/useAiStatus';
 
 // ── 模块注册表 ──────────────────────────────
 
@@ -46,19 +47,19 @@ const {
   addTag,
 } = useTaskStore();
 
+// ── AI 状态 ──────────────────────────────
+
+const { aiEnabled, load: loadAiSettings } = useAiStatus();
+
 // ── 全局状态 ──────────────────────────────
 
 /** 当前侧边栏选中的功能模块 */
 const activeModule = ref<AppModule>('tasks');
 
-/** AI 功能是否可用（已配置 API Key 即启用） */
-const aiEnabled = ref(false);
-
 // ── 生命周期 ──────────────────────────────
 
 onMounted(async () => {
-  await loadAll();
-  await loadAiSettings();
+  await Promise.all([loadAll(), loadAiSettings()]);
   const appWindow = getCurrentWindow();
   const unlistenFocus = await appWindow.listen('tauri://focus', () => {
     loadAll();
@@ -68,16 +69,6 @@ onMounted(async () => {
     unlistenFocus();
   });
 });
-
-/** 检查是否配置了启用的 AI 供应商 */
-async function loadAiSettings() {
-  try {
-    const vendors = await invoke<Vendor[]>('get_vendors');
-    aiEnabled.value = vendors.some((v) => v.enabled);
-  } catch {
-    aiEnabled.value = false;
-  }
-}
 
 // ── 模块切换 ──────────────────────────────
 
