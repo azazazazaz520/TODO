@@ -86,14 +86,15 @@ function handleClick(item: ModuleDescriptor) {
 
 <style scoped>
 .sidebar {
-  width: 240px;
+  width: 260px;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
-  padding: var(--space-lg) var(--space-md);
+  padding: var(--space-xl) var(--space-md);
   flex-shrink: 0;
   user-select: none;
+  transition: all var(--transition-normal);
 }
 
 .sidebar-group {
@@ -111,7 +112,7 @@ function handleClick(item: ModuleDescriptor) {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-sm) var(--space-lg);
   border-radius: var(--radius-md);
   cursor: pointer;
   font-size: var(--text-h2);
@@ -123,12 +124,14 @@ function handleClick(item: ModuleDescriptor) {
 .nav-item:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
+  transform: translateX(2px);
 }
 
 .nav-item.active {
   background: var(--accent-bg);
   color: var(--accent);
   font-weight: 600;
+  box-shadow: var(--shadow-sm);
 }
 
 .nav-accent-bar {

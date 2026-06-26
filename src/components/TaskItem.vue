@@ -318,12 +318,16 @@ const dueLabel = computed(() => {
   align-items: flex-start;
   padding: var(--space-md) var(--space-lg);
   border-radius: var(--radius-lg);
-  transition: background var(--transition-fast);
+  transition: all var(--transition-fast);
   gap: var(--space-sm);
+  background: var(--bg-primary);
+  margin-bottom: var(--space-xs);
 }
 
 .task-item:hover {
   background: var(--bg-secondary);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
 }
 
 .task-item.completed {
@@ -331,12 +335,18 @@ const dueLabel = computed(() => {
 }
 
 .task-checkbox {
-  width: 18px;
-  height: 18px;
-  margin-top: 2px;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
   cursor: pointer;
-  accent-color: var(--gray-900);
+  accent-color: var(--accent);
   flex-shrink: 0;
+  border-radius: 50%;
+  transition: transform var(--transition-fast);
+}
+
+.task-checkbox:hover {
+  transform: scale(1.1);
 }
 
 .task-body {
@@ -410,8 +420,17 @@ const dueLabel = computed(() => {
 
 .tag-badge {
   font-size: var(--text-xs);
-  color: var(--text-muted);
-  padding: 0 var(--space-xs);
+  color: var(--text-secondary);
+  padding: 2px var(--space-sm);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.tag-badge:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
 }
 
 .task-edit-input {
@@ -444,6 +463,12 @@ const dueLabel = computed(() => {
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.task-item:hover .task-actions {
+  opacity: 1;
 }
 
 .menu-wrapper {

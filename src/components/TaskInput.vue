@@ -398,16 +398,18 @@ function formatDueDate(d: string): string {
 
 .task-input-field {
   flex: 1;
-  padding: 10px var(--space-lg);
+  padding: 12px var(--space-lg);
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   font-size: var(--text-base);
   outline: none;
-  transition: border-color var(--transition-normal);
+  transition: all var(--transition-fast);
+  background: var(--bg-primary);
 }
 
 .task-input-field:focus {
-  border-color: var(--gray-600);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-muted);
 }
 .task-input-field.error {
   border-color: var(--danger);
@@ -419,34 +421,39 @@ function formatDueDate(d: string): string {
 
 .date-btn {
   padding: 10px var(--space-md);
-  background: none;
+  background: var(--bg-primary);
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   cursor: pointer;
   font-size: var(--text-sm);
   line-height: 1;
-  transition: border-color var(--transition-normal);
+  transition: all var(--transition-fast);
 }
 
 .date-btn:hover,
 .date-btn.active {
-  border-color: var(--gray-600);
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--accent);
 }
 
 .task-input-btn {
   padding: 10px var(--space-xl);
-  background: var(--gray-900);
+  background: var(--accent);
   color: white;
   border: none;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   font-size: var(--text-base);
   cursor: pointer;
-  transition: background var(--transition-normal);
+  transition: all var(--transition-fast);
   white-space: nowrap;
+  font-weight: 500;
 }
 
 .task-input-btn:hover {
-  background: var(--gray-800);
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .ai-btn {
@@ -481,24 +488,25 @@ function formatDueDate(d: string): string {
   align-items: center;
   gap: var(--space-xs);
   padding: var(--space-xs) var(--space-md);
-  background: none;
-  border: 1px solid var(--gray-300);
-  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
   font-size: var(--text-xs);
   cursor: pointer;
   transition: all var(--transition-fast);
-  color: var(--text-muted);
-}
-
-.qa-btn:hover {
-  border-color: var(--gray-600);
   color: var(--text-secondary);
 }
 
+.qa-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
 .qa-btn.active {
-  background: var(--bg-hover);
-  border-color: var(--gray-600);
-  color: var(--text-primary);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
 }
 
 .tag-input-row {

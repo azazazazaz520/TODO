@@ -89,7 +89,7 @@ function back() {
       <div class="tb-search">
         <svg
           width="14"
-          height="14"
+          height="20"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -163,12 +163,19 @@ function back() {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  margin: 0 var(--space-xl) var(--space-lg);
+  margin: 0 var(--space-2xl) var(--space-xl);
   padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  max-width: 400px;
+  border-radius: var(--radius-full);
+  max-width: 480px;
   color: var(--text-muted);
+  transition: all var(--transition-fast);
+  background: var(--bg-primary);
+}
+
+.tb-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-muted);
 }
 
 .tb-search-input {
@@ -193,21 +200,28 @@ function back() {
 .tb-card {
   background: var(--bg-primary);
   border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   padding: var(--space-xl) var(--space-lg);
   cursor: pointer;
-  transition: border-color var(--transition-fast);
-  min-height: 90px;
+  transition: all var(--transition-fast);
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .tb-card:hover {
   border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(2px);
+  z-index: 1;
 }
 
 .tb-card-icon {
   width: 24px;
   height: 24px;
   margin-bottom: var(--space-sm);
+  transition: stroke var(--transition-fast);
 }
 
 .tb-card-name {
@@ -215,10 +229,20 @@ function back() {
   font-size: var(--text-base);
   color: var(--text-primary);
   margin-bottom: 2px;
+  transition: color var(--transition-fast);
 }
 
 .tb-card-desc {
   font-size: var(--text-xs);
   color: var(--text-muted);
+  transition: color var(--transition-fast);
+}
+
+.tb-card:hover .tb-card-name {
+  color: var(--accent);
+}
+
+.tb-card:hover .tb-card-desc {
+  color: var(--text-secondary);
 }
 </style>

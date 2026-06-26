@@ -378,7 +378,8 @@ function handleSwitchModule(module: AppModule) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
+  transition: background var(--transition-normal);
 }
 
 /* 模块容器通用样式 */
@@ -392,14 +393,19 @@ function handleSwitchModule(module: AppModule) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg) 0 0 0;
+  box-shadow: -4px 0 var(--shadow-md);
+  z-index: 1;
 }
 
 /* 任务看板头部：标题 + 统计 + AI 状态 */
 .module-header {
-  padding: var(--space-2xl) var(--space-xl) var(--space-md);
+  padding: var(--space-2xl) var(--space-xl) var(--space-lg);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  border-bottom: 1px solid transparent;
 }
 
 .module-title {
@@ -428,23 +434,23 @@ function handleSwitchModule(module: AppModule) {
 /* 任务看板内容区：左右分区布局 */
 .module-body {
   flex: 1;
-  padding: 0 var(--space-xl) var(--space-xl);
+  padding: 0 var(--space-2xl) var(--space-2xl);
   overflow: hidden;
   display: flex;
-  gap: var(--space-lg);
-  max-width: 960px;
+  gap: var(--space-xl);
+  max-width: 1280px;
   margin: 0 auto;
   width: 100%;
 }
 
 /* 左侧工具栏：日历 + 标签筛选，固定宽度 */
 .task-sidebar {
-  width: 200px;
+  width: 240px;
   flex-shrink: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-lg);
 }
 
 /* 右侧任务区：输入 + 列表 + 统计，flex 填充 */

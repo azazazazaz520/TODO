@@ -766,10 +766,11 @@ function getIcon(isDir: boolean) {
   align-items: center;
   gap: 4px;
   padding: 0 var(--space-sm);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   cursor: pointer;
   font-size: var(--text-sm);
   color: var(--text-secondary);
+  transition: all var(--transition-fast);
 }
 
 .tree-row-dir {
@@ -783,10 +784,12 @@ function getIcon(isDir: boolean) {
 
 .tree-row:hover {
   background: var(--bg-hover);
+  color: var(--text-primary);
+  transform: translateX(2px);
 }
 
 .tree-row.active {
-  background: var(--accent-bg-active);
+  background: var(--accent-bg);
   color: var(--accent);
   font-weight: 500;
 }
@@ -826,9 +829,10 @@ function getIcon(isDir: boolean) {
   color: var(--text-muted);
   cursor: pointer;
   padding: 0 4px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   line-height: 1;
   flex-shrink: 0;
+  transition: all var(--transition-fast);
 }
 
 .tree-row:hover .tree-add-btn {
@@ -861,9 +865,10 @@ function getIcon(isDir: boolean) {
   color: var(--text-muted);
   cursor: pointer;
   padding: 2px 3px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
+  transition: all var(--transition-fast);
 }
 
 .node-btn:hover {
@@ -914,9 +919,10 @@ function getIcon(isDir: boolean) {
   color: var(--text-secondary);
   cursor: pointer;
   padding: 2px 8px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   flex-shrink: 0;
   white-space: nowrap;
+  transition: all var(--transition-fast);
 }
 
 .dir-change-btn:hover {
@@ -977,15 +983,17 @@ function getIcon(isDir: boolean) {
   padding: 4px;
   color: var(--text-secondary);
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all var(--transition-fast);
 }
 
 .toolbar-action-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent-muted);
 }
 
 .editor-modes {
@@ -1000,11 +1008,13 @@ function getIcon(isDir: boolean) {
   font-size: var(--text-xs);
   color: var(--text-secondary);
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
 }
 
 .mode-btn:hover {
   background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .mode-btn.active {
@@ -1012,6 +1022,7 @@ function getIcon(isDir: boolean) {
   color: #fff;
   font-weight: 500;
   border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ── 编辑区面板 ──────────────────── */
@@ -1033,6 +1044,10 @@ function getIcon(isDir: boolean) {
   background: var(--bg-primary);
   resize: none;
   outline: none;
+}
+
+.editor-textarea:focus {
+  box-shadow: inset 0 0 0 2px var(--accent-bg);
 }
 
 .editor-textarea.full {
@@ -1064,15 +1079,18 @@ function getIcon(isDir: boolean) {
 }
 .editor-preview :deep(code) {
   background: var(--bg-tertiary);
-  padding: 1px 4px;
-  border-radius: 3px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
   font-size: 0.9em;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
 }
 .editor-preview :deep(pre) {
   background: var(--bg-secondary);
   padding: var(--space-md);
   border-radius: var(--radius-md);
   overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
 }
 .editor-preview :deep(pre code) {
   background: none;
@@ -1154,7 +1172,7 @@ function getIcon(isDir: boolean) {
   gap: var(--space-xs);
   padding: var(--space-sm) var(--space-lg);
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   background: var(--bg-primary);
   color: var(--text-secondary);
   font-size: var(--text-sm);
@@ -1165,6 +1183,8 @@ function getIcon(isDir: boolean) {
 .welcome-btn:hover {
   background: var(--bg-hover);
   border-color: var(--border-default);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .welcome-btn-primary {
@@ -1176,5 +1196,7 @@ function getIcon(isDir: boolean) {
 .welcome-btn-primary:hover {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 </style>

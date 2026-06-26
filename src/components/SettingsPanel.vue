@@ -193,20 +193,22 @@ const subModules: { key: SettingsSubModule; label: string }[] = [
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   background: none;
   font-size: var(--text-sm);
-  color: var(--gray-700);
+  color: var(--text-secondary);
   cursor: pointer;
   text-align: left;
+  transition: all var(--transition-fast);
 }
 .nav-item:hover {
   background: var(--bg-hover);
+  transform: translateX(2px);
 }
 .nav-item.active {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  font-weight: 500;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .settings-main {
@@ -226,10 +228,11 @@ const subModules: { key: SettingsSubModule; label: string }[] = [
 
 .settings-group {
   background: var(--bg-primary);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-  margin-bottom: var(--space-md);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .group-title {
