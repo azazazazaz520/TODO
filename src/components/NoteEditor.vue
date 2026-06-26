@@ -13,6 +13,12 @@ const selectedPath = ref<string | null>(null);
 const content = ref('');
 const viewMode = ref<'edit' | 'split' | 'preview'>('split');
 const saving = ref(false);
+const isDirty = ref(false);
+const cursorLine = ref(1);
+const cursorCol = ref(1);
+
+/** 文本域 DOM 引用，用于追踪光标位置 */
+const textareaRef = ref<HTMLTextAreaElement | null>(null);
 
 /** 笔记目录路径 */
 const notesDir = ref('');
@@ -31,6 +37,27 @@ const renderedHtml = computed(() => {
   if (!content.value) return '';
   return marked.parse(content.value) as string;
 });
+
+/** 字数统计（中文字 + 英文单词） */
+const wordCount = computed(() => {
+  const text = content.value;
+  if (!text) return 0;
+  const chineseChars = (text.match(/[\u4e00-\u9fff]/g) || []).length;
+  const englishWords = (text.match(/[a-zA-Z]+/g) || []).length;
+  return chineseChars + englishWords;
+});
+
+/** 更新光标位置 */
+function updateCursor() {
+  const el = textareaRef.value;
+  if (!el) return;
+  const text = el.value;
+  const pos = el.selectionStart;
+  const before = text.substring(0, pos);
+  cursorLine.value = before.split('\n').length;
+  const lastLine = before.split('\n').pop() || '';
+  cursorCol.value = lastLine.length + 1;
+}
 
 // ── 自定义对话框状态 ──────────────────────────────
 
@@ -90,6 +117,9 @@ async function openFile(path: string) {
   try {
     content.value = await invoke<string>('read_note', { path });
     selectedPath.value = path;
+    isDirty.value = false;
+    cursorLine.value = 1;
+    cursorCol.value = 1;
   } catch (e) {
     console.error('读取文件失败:', e);
   }
@@ -100,12 +130,14 @@ async function openFile(path: string) {
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 watch(content, (val) => {
+  isDirty.value = true;
   if (!selectedPath.value) return;
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     saving.value = true;
     try {
       await invoke('write_note', { path: selectedPath.value, content: val });
+      isDirty.value = false;
     } catch (e) {
       console.error('保存失败:', e);
     } finally {
@@ -253,7 +285,17 @@ function getIcon(isDir: boolean) {
         <template v-for="entry in tree" :key="entry.path">
           <!-- 目录 -->
           <template v-if="entry.isDir">
-            <div class="tree-row" @click="toggleExpand(entry.path)">
+            <div class="tree-row tree-row-dir" @click="toggleExpand(entry.path)">
+              <svg
+                class="tree-chevron"
+                :class="{ open: expanded.has(entry.path) }"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
               <svg
                 class="tree-icon"
                 viewBox="0 0 24 24"
@@ -266,28 +308,61 @@ function getIcon(isDir: boolean) {
                 <path :d="getIcon(true)" />
               </svg>
               <span class="tree-name">{{ entry.name }}</span>
-              <svg
-                class="tree-chevron"
-                :class="{ open: expanded.has(entry.path) }"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M6 9l6 6 6-6" />
-              </svg>
-            </div>
-            <div v-if="expanded.has(entry.path) && entry.children" class="tree-children">
-              <div class="tree-row tree-row-child">
-                <button class="tree-inline-btn" @click.stop="createFile(entry.path)">+ 文件</button>
-                <button class="tree-inline-btn" @click.stop="createFolder(entry.path)">
-                  + 文件夹
+              <button class="tree-add-btn" title="新建文件" @click.stop="createFile(entry.path)">
+                +
+              </button>
+              <div class="tree-node-actions">
+                <button class="node-btn" title="重命名" @click.stop="renameEntry(entry.path, true)">
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  >
+                    <path
+                      d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+                    />
+                  </svg>
+                </button>
+                <button
+                  class="node-btn node-btn-danger"
+                  title="删除"
+                  @click.stop="deleteEntry(entry.path)"
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  >
+                    <path
+                      d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                    />
+                  </svg>
                 </button>
               </div>
+            </div>
+            <div v-if="expanded.has(entry.path) && entry.children" class="tree-children">
               <template v-for="child in entry.children" :key="child.path">
                 <!-- 子目录 -->
                 <template v-if="child.isDir">
-                  <div class="tree-row tree-row-child" @click="toggleExpand(child.path)">
+                  <div class="tree-row tree-row-dir" @click="toggleExpand(child.path)">
+                    <svg
+                      class="tree-chevron"
+                      :class="{ open: expanded.has(child.path) }"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
                     <svg
                       class="tree-icon"
                       viewBox="0 0 24 24"
@@ -300,42 +375,55 @@ function getIcon(isDir: boolean) {
                       <path :d="getIcon(true)" />
                     </svg>
                     <span class="tree-name">{{ child.name }}</span>
-                    <svg
-                      class="tree-chevron"
-                      :class="{ open: expanded.has(child.path) }"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
+                    <button
+                      class="tree-add-btn"
+                      title="新建文件"
+                      @click.stop="createFile(child.path)"
                     >
-                      <path d="M6 9l6 6 6-6" />
-                    </svg>
+                      +
+                    </button>
                     <div class="tree-node-actions">
                       <button
                         class="node-btn"
                         title="重命名"
                         @click.stop="renameEntry(child.path, true)"
                       >
-                        R
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                        >
+                          <path
+                            d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+                          />
+                        </svg>
                       </button>
                       <button
                         class="node-btn node-btn-danger"
                         title="删除"
                         @click.stop="deleteEntry(child.path)"
                       >
-                        D
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                        >
+                          <path
+                            d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                          />
+                        </svg>
                       </button>
                     </div>
                   </div>
                   <div v-if="expanded.has(child.path) && child.children" class="tree-children">
-                    <div class="tree-row tree-row-child">
-                      <button class="tree-inline-btn" @click.stop="createFile(child.path)">
-                        + 文件
-                      </button>
-                      <button class="tree-inline-btn" @click.stop="createFolder(child.path)">
-                        + 文件夹
-                      </button>
-                    </div>
                     <div
                       v-for="sub in child.children.filter((c) => !c.isDir)"
                       :key="sub.path"
@@ -354,22 +442,6 @@ function getIcon(isDir: boolean) {
                         <path :d="getIcon(false)" />
                       </svg>
                       <span class="tree-name">{{ sub.name }}</span>
-                      <div class="tree-node-actions">
-                        <button
-                          class="node-btn"
-                          title="重命名"
-                          @click.stop="renameEntry(sub.path, false)"
-                        >
-                          R
-                        </button>
-                        <button
-                          class="node-btn node-btn-danger"
-                          title="删除"
-                          @click.stop="deleteEntry(sub.path)"
-                        >
-                          D
-                        </button>
-                      </div>
                     </div>
                   </div>
                 </template>
@@ -397,14 +469,38 @@ function getIcon(isDir: boolean) {
                       title="重命名"
                       @click.stop="renameEntry(child.path, false)"
                     >
-                      R
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      >
+                        <path
+                          d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+                        />
+                      </svg>
                     </button>
                     <button
                       class="node-btn node-btn-danger"
                       title="删除"
                       @click.stop="deleteEntry(child.path)"
                     >
-                      D
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      >
+                        <path
+                          d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                        />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -431,14 +527,38 @@ function getIcon(isDir: boolean) {
             <span class="tree-name">{{ entry.name }}</span>
             <div class="tree-node-actions">
               <button class="node-btn" title="重命名" @click.stop="renameEntry(entry.path, false)">
-                R
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path
+                    d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+                  />
+                </svg>
               </button>
               <button
                 class="node-btn node-btn-danger"
                 title="删除"
                 @click.stop="deleteEntry(entry.path)"
               >
-                D
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <path
+                    d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                  />
+                </svg>
               </button>
             </div>
           </div>
@@ -460,36 +580,74 @@ function getIcon(isDir: boolean) {
     <!-- 右侧编辑区 -->
     <div class="editor-area">
       <template v-if="selectedPath">
-        <div class="editor-header">
-          <span class="editor-filename">{{ selectedName }}</span>
-          <span v-if="saving" class="editor-status">保存中...</span>
-          <div class="editor-modes">
-            <button
-              :class="['mode-btn', { active: viewMode === 'edit' }]"
-              @click="viewMode = 'edit'"
-            >
-              编辑
+        <!-- 顶部工具栏 -->
+        <div class="editor-toolbar">
+          <div class="toolbar-left">
+            <span class="toolbar-filename">{{ selectedName }}</span>
+            <span v-if="isDirty" class="toolbar-dirty" title="未保存的更改">&#9679;</span>
+          </div>
+          <div class="toolbar-right">
+            <div class="editor-modes">
+              <button
+                :class="['mode-btn', { active: viewMode === 'edit' }]"
+                @click="viewMode = 'edit'"
+              >
+                编辑
+              </button>
+              <button
+                :class="['mode-btn', { active: viewMode === 'split' }]"
+                @click="viewMode = 'split'"
+              >
+                并排
+              </button>
+              <button
+                :class="['mode-btn', { active: viewMode === 'preview' }]"
+                @click="viewMode = 'preview'"
+              >
+                预览
+              </button>
+            </div>
+            <button class="toolbar-action-btn" title="新建笔记" @click="createFile('')">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
             </button>
-            <button
-              :class="['mode-btn', { active: viewMode === 'split' }]"
-              @click="viewMode = 'split'"
-            >
-              并排
-            </button>
-            <button
-              :class="['mode-btn', { active: viewMode === 'preview' }]"
-              @click="viewMode = 'preview'"
-            >
-              预览
+            <button class="toolbar-action-btn" title="新建文件夹" @click="createFolder('')">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path
+                  d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2zM12 11v6M9 14h6"
+                />
+              </svg>
             </button>
           </div>
         </div>
+
+        <!-- 编辑区 -->
         <div class="editor-panes">
           <textarea
+            ref="textareaRef"
             v-show="viewMode !== 'preview'"
             v-model="content"
             :class="['editor-textarea', { full: viewMode === 'edit' }]"
             placeholder="开始编写 Markdown..."
+            @click="updateCursor"
+            @keyup="updateCursor"
           />
           <div
             v-show="viewMode !== 'edit'"
@@ -497,9 +655,58 @@ function getIcon(isDir: boolean) {
             v-html="renderedHtml"
           />
         </div>
+
+        <!-- 底部状态栏 -->
+        <div class="editor-statusbar">
+          <span>UTF-8</span>
+          <span class="statusbar-sep">|</span>
+          <span>Markdown</span>
+          <span class="statusbar-sep">|</span>
+          <span>{{ wordCount }} 字</span>
+          <span class="statusbar-sep">|</span>
+          <span>行 {{ cursorLine }}, 列 {{ cursorCol }}</span>
+          <span v-if="saving" class="statusbar-saving">保存中...</span>
+        </div>
       </template>
-      <div v-else class="editor-empty">
-        <p>从左侧文件树选择或新建一个笔记</p>
+
+      <!-- 空状态欢迎页 -->
+      <div v-else class="editor-welcome">
+        <div class="welcome-content">
+          <h1 class="welcome-title">欢迎使用笔记</h1>
+          <p class="welcome-desc">从左侧文件树选择文件，或快速开始</p>
+          <div class="welcome-actions">
+            <button class="welcome-btn welcome-btn-primary" @click="createFile('')">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              新建笔记
+            </button>
+            <button class="welcome-btn" @click="createFolder('')">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path
+                  d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2zM12 11v6M9 14h6"
+                />
+              </svg>
+              新建文件夹
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -527,16 +734,18 @@ function getIcon(isDir: boolean) {
 /* ── 文件树 ────────────────────── */
 
 .file-tree {
-  width: 220px;
+  width: 260px;
   flex-shrink: 0;
   border-right: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: var(--bg-secondary);
 }
 
 .tree-header {
   padding: var(--space-md) var(--space-md) var(--space-sm);
+  flex-shrink: 0;
 }
 
 .tree-title {
@@ -547,6 +756,7 @@ function getIcon(isDir: boolean) {
 
 .tree-list {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 0 var(--space-xs) var(--space-md);
 }
@@ -555,12 +765,20 @@ function getIcon(isDir: boolean) {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 3px var(--space-sm);
+  padding: 0 var(--space-sm);
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: var(--text-sm);
   color: var(--text-secondary);
-  min-height: 28px;
+}
+
+.tree-row-dir {
+  min-height: 40px;
+}
+
+.tree-row-file {
+  min-height: 30px;
+  padding-left: 28px;
 }
 
 .tree-row:hover {
@@ -568,22 +786,14 @@ function getIcon(isDir: boolean) {
 }
 
 .tree-row.active {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
+  background: var(--accent-bg-active);
+  color: var(--accent);
   font-weight: 500;
 }
 
-.tree-row-child {
-  padding-left: 20px;
-}
-
-.tree-row-file {
-  padding-left: 28px;
-}
-
 .tree-icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
   stroke-width: 1.5;
 }
@@ -596,19 +806,44 @@ function getIcon(isDir: boolean) {
 }
 
 .tree-chevron {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   flex-shrink: 0;
   transition: transform 0.15s;
+  transform: rotate(-90deg);
 }
 
 .tree-chevron.open {
-  transform: rotate(180deg);
+  transform: rotate(0deg);
+}
+
+.tree-add-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 3px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.tree-row:hover .tree-add-btn {
+  display: block;
+}
+
+.tree-add-btn:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
 }
 
 .tree-children {
   border-left: 1px solid var(--border-subtle);
   margin-left: 10px;
+  padding-left: 4px;
 }
 
 .tree-node-actions {
@@ -623,11 +858,12 @@ function getIcon(isDir: boolean) {
 .node-btn {
   background: none;
   border: none;
-  font-size: 10px;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 0 3px;
-  border-radius: 2px;
+  padding: 2px 3px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
 }
 
 .node-btn:hover {
@@ -637,22 +873,6 @@ function getIcon(isDir: boolean) {
 
 .node-btn-danger:hover {
   color: #e74c3c;
-}
-
-.tree-inline-btn {
-  background: none;
-  border: none;
-  font-size: 11px;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 2px;
-  margin: 0 2px;
-}
-
-.tree-inline-btn:hover {
-  background: var(--bg-hover);
-  color: var(--accent);
 }
 
 /* ── 文件树底部目录设置 ──────────── */
@@ -711,29 +931,64 @@ function getIcon(isDir: boolean) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--bg-primary);
 }
 
-.editor-header {
+/* ── 工具栏 ──────────────────────── */
+
+.editor-toolbar {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-sm) var(--space-lg);
+  justify-content: space-between;
+  padding: 0 var(--space-lg);
+  height: 40px;
   border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+  flex-shrink: 0;
 }
 
-.editor-filename {
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.toolbar-filename {
   font-weight: 600;
   font-size: var(--text-sm);
   color: var(--text-primary);
 }
 
-.editor-status {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
+.toolbar-dirty {
+  font-size: 8px;
+  color: #f59e0b;
+  line-height: 1;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.toolbar-action-btn {
+  background: none;
+  border: 1px solid var(--border-light);
+  padding: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toolbar-action-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .editor-modes {
-  margin-left: auto;
   display: flex;
   gap: 2px;
 }
@@ -741,7 +996,7 @@ function getIcon(isDir: boolean) {
 .mode-btn {
   background: none;
   border: 1px solid var(--border-light);
-  padding: 2px 10px;
+  padding: 3px 10px;
   font-size: var(--text-xs);
   color: var(--text-secondary);
   cursor: pointer;
@@ -753,11 +1008,13 @@ function getIcon(isDir: boolean) {
 }
 
 .mode-btn.active {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
+  background: var(--accent);
+  color: #fff;
   font-weight: 500;
-  border-color: var(--border-default);
+  border-color: var(--accent);
 }
+
+/* ── 编辑区面板 ──────────────────── */
 
 .editor-panes {
   flex: 1;
@@ -832,12 +1089,92 @@ function getIcon(isDir: boolean) {
   padding-left: 1.5em;
 }
 
-.editor-empty {
+/* ── 状态栏 ──────────────────────── */
+
+.editor-statusbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  height: 28px;
+  padding: 0 var(--space-lg);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.statusbar-sep {
+  color: var(--border-default);
+}
+
+.statusbar-saving {
+  margin-left: auto;
+  color: var(--accent);
+}
+
+/* ── 空状态欢迎页 ────────────────── */
+
+.editor-welcome {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-disabled);
+  background: var(--bg-primary);
+}
+
+.welcome-content {
+  text-align: center;
+  max-width: 360px;
+}
+
+.welcome-title {
+  font-size: var(--text-h1);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-sm);
+}
+
+.welcome-desc {
   font-size: var(--text-base);
+  color: var(--text-muted);
+  margin: 0 0 var(--space-xl);
+}
+
+.welcome-actions {
+  display: flex;
+  gap: var(--space-md);
+  justify-content: center;
+}
+
+.welcome-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-lg);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.welcome-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-default);
+}
+
+.welcome-btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.welcome-btn-primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 </style>

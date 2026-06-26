@@ -376,7 +376,8 @@ function handleSwitchModule(module: AppModule) {
 .module-tasks,
 .module-settings,
 .module-placeholder,
-.module-ai {
+.module-ai,
+.module-notes {
   flex: 1;
   display: flex;
   flex-direction: column;
