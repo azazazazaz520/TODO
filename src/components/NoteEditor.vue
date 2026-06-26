@@ -3,6 +3,7 @@ import { ref, watch, computed, nextTick } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { marked } from 'marked';
 import type { FileEntry } from '../types';
+import InputDialog from './InputDialog.vue';
 
 // ── 状态 ──────────────────────────────
 
@@ -26,6 +27,15 @@ const renderedHtml = computed(() => {
   if (!content.value) return '';
   return marked.parse(content.value) as string;
 });
+
+// ── 自定义对话框状态 ──────────────────────────────
+
+const dialogVisible = ref(false);
+const dialogTitle = ref('');
+const dialogLabel = ref('');
+const dialogPlaceholder = ref('');
+const dialogDefault = ref('');
+let dialogCallback: ((value: string | null) => void) | null = null;
 
 // ── 加载 ──────────────────────────────
 
@@ -68,6 +78,48 @@ watch(content, (val) => {
 // initially load tree
 loadTree();
 
+// ── 自定义对话框 ──────────────────────────────
+
+/**
+ * 显示输入对话框，替代原生 prompt()
+ * @param title 对话框标题
+ * @param label 输入框标签
+ * @param placeholder 占位符文本
+ * @param defaultValue 默认值
+ * @returns Promise<string | null>
+ */
+function showDialog(
+  title: string,
+  label: string,
+  placeholder?: string,
+  defaultValue?: string,
+): Promise<string | null> {
+  return new Promise((resolve) => {
+    dialogTitle.value = title;
+    dialogLabel.value = label;
+    dialogPlaceholder.value = placeholder || '';
+    dialogDefault.value = defaultValue || '';
+    dialogCallback = resolve;
+    dialogVisible.value = true;
+  });
+}
+
+function handleDialogConfirm(value: string) {
+  dialogVisible.value = false;
+  if (dialogCallback) {
+    dialogCallback(value);
+    dialogCallback = null;
+  }
+}
+
+function handleDialogCancel() {
+  dialogVisible.value = false;
+  if (dialogCallback) {
+    dialogCallback(null);
+    dialogCallback = null;
+  }
+}
+
 // ── 文件树操作 ──────────────────────────────
 
 function toggleExpand(dirPath: string) {
@@ -81,7 +133,7 @@ function toggleExpand(dirPath: string) {
 }
 
 async function createFile(parentDir: string) {
-  const name = prompt('文件名称（不含扩展名）：');
+  const name = await showDialog('新建文件', '文件名称（不含扩展名）：', '例如：我的笔记', '');
   if (!name) return;
   const fileName = name.endsWith('.md') ? name : `${name}.md`;
   const path = parentDir ? `${parentDir}/${fileName}` : fileName;
@@ -95,7 +147,7 @@ async function createFile(parentDir: string) {
 }
 
 async function createFolder(parentDir: string) {
-  const name = prompt('文件夹名称：');
+  const name = await showDialog('新建文件夹', '文件夹名称：', '例如：工作文档', '');
   if (!name) return;
   const path = parentDir ? `${parentDir}/${name}` : name;
   try {
@@ -111,7 +163,7 @@ async function createFolder(parentDir: string) {
 
 async function renameEntry(path: string, isDir: boolean) {
   const oldName = path.split('/').pop() || '';
-  const newName = prompt('重命名为：', oldName);
+  const newName = await showDialog('重命名', '新名称：', '', oldName);
   if (!newName || newName === oldName) return;
   try {
     await invoke('rename_note_entry', { path, newName });
@@ -403,6 +455,17 @@ function getIcon(isDir: boolean) {
         <p>从左侧文件树选择或新建一个笔记</p>
       </div>
     </div>
+
+    <!-- 自定义输入对话框 -->
+    <InputDialog
+      :visible="dialogVisible"
+      :title="dialogTitle"
+      :label="dialogLabel"
+      :placeholder="dialogPlaceholder"
+      :default-value="dialogDefault"
+      @confirm="handleDialogConfirm"
+      @cancel="handleDialogCancel"
+    />
   </div>
 </template>
 
