@@ -320,10 +320,7 @@ pub async fn json_explain(settings: &AiSettings, json_text: &str) -> Result<Stri
 //  功能 7：正则表达式 AI 生成
 // ═══════════════════════════════════════════════════════════════
 
-pub async fn regex_generate(
-    settings: &AiSettings,
-    description: &str,
-) -> Result<String, String> {
+pub async fn regex_generate(settings: &AiSettings, description: &str) -> Result<String, String> {
     let system_prompt = prompt::load(prompt::REGEX_GENERATE, &[]);
     chat_completion(settings, &system_prompt, description).await
 }

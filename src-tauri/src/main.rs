@@ -1,212 +1,19 @@
 // 仅在 Release 模式下隐藏 Windows 控制台窗口
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use serde::Deserialize;
 use std::collections::HashSet;
 use std::sync::Mutex;
 use tauri::Manager;
 use tauri_plugin_notification::NotificationExt;
 
-mod ai;
-mod notes;
-mod prompt;
-mod store;
+pub(crate) mod ai;
+pub(crate) mod notes;
+pub(crate) mod prompt;
+pub(crate) mod store;
 
-/// 应用全局状态，由 Tauri 托管，可在所有命令中访问
-struct AppState {
-    /// 任务数据存储（受 Mutex 保护，确保线程安全）
-    data: Mutex<store::DataStore>,
-    /// 应用配置（供应商、主题、提醒等）
-    config: Mutex<store::ConfigStore>,
-    /// 当天已通知的任务 ID 集合，避免重复提醒
-    notified_today: Mutex<HashSet<String>>,
-}
+mod commands;
 
-/// 更新任务的请求参数（聚合为 struct 避免参数过多）
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct UpdateTaskArgs {
-    id: String,
-    title: String,
-    due_date: Option<String>,
-    tags: Vec<String>,
-    important: bool,
-    pinned: bool,
-    is_daily: bool,
-}
-
-/// 新增任务的请求参数（聚合为 struct 避免参数过多）
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct AddTaskArgs {
-    title: String,
-    due_date: Option<String>,
-    tags: Option<Vec<String>>,
-    important: Option<bool>,
-    pinned: Option<bool>,
-    is_daily: Option<bool>,
-    parent_id: Option<String>,
-}
-
-// ── 任务 CRUD 命令 ──────────────────────────────
-
-/// 获取所有任务列表
-#[tauri::command]
-fn get_tasks(state: tauri::State<AppState>) -> Vec<store::Task> {
-    state.data.lock().unwrap().tasks.clone()
-}
-
-/// 新增任务
-#[tauri::command]
-fn add_task(state: tauri::State<AppState>, args: AddTaskArgs) -> Result<store::Task, String> {
-    let mut data = state.data.lock().unwrap();
-    let task = store::Task {
-        id: uuid::Uuid::new_v4().to_string(),
-        title: args.title,
-        completed: false,
-        created_at: chrono::Utc::now().to_rfc3339(),
-        completed_at: None,
-        due_date: args.due_date,
-        tags: args.tags.unwrap_or_default(),
-        important: args.important.unwrap_or(false),
-        pinned: args.pinned.unwrap_or(false),
-        is_daily: args.is_daily.unwrap_or(false),
-        parent_id: args.parent_id,
-    };
-    data.tasks.push(task.clone());
-    store::save_data(&data)?;
-    Ok(task)
-}
-
-/// 切换任务完成状态（自动记录完成/取消时间）
-#[tauri::command]
-fn toggle_task(state: tauri::State<AppState>, id: String) -> Result<(), String> {
-    let mut data = state.data.lock().unwrap();
-    if let Some(task) = data.tasks.iter_mut().find(|t| t.id == id) {
-        task.completed = !task.completed;
-        task.completed_at = if task.completed {
-            Some(chrono::Utc::now().to_rfc3339())
-        } else {
-            None
-        };
-    }
-    store::save_data(&data)
-}
-
-/// 切换每日任务的完成状态（按日期记录，支持跨天追踪）
-#[tauri::command]
-fn toggle_daily_task(
-    state: tauri::State<AppState>,
-    id: String,
-    date: String,
-) -> Result<(), String> {
-    let mut data = state.data.lock().unwrap();
-    if let Some(pos) = data
-        .daily_completions
-        .iter()
-        .position(|dc| dc.task_id == id && dc.date == date)
-    {
-        data.daily_completions.remove(pos);
-    } else {
-        data.daily_completions
-            .push(store::DailyCompletion { task_id: id, date });
-    }
-    store::save_data(&data)
-}
-
-/// 更新任务的所有字段
-#[tauri::command]
-fn update_task(state: tauri::State<AppState>, args: UpdateTaskArgs) -> Result<(), String> {
-    let mut data = state.data.lock().unwrap();
-    if let Some(task) = data.tasks.iter_mut().find(|t| t.id == args.id) {
-        task.title = args.title;
-        task.due_date = args.due_date;
-        task.tags = args.tags;
-        task.important = args.important;
-        task.pinned = args.pinned;
-        task.is_daily = args.is_daily;
-    }
-    store::save_data(&data)
-}
-
-/// 删除指定任务（同时清理子任务和每日完成记录）
-#[tauri::command]
-fn delete_task(state: tauri::State<AppState>, id: String) -> Result<(), String> {
-    let mut data = state.data.lock().unwrap();
-    // 删除目标任务
-    data.tasks.retain(|t| t.id != id);
-    // 级联删除子任务（parent_id 指向被删任务的）
-    data.tasks.retain(|t| t.parent_id.as_deref() != Some(&id));
-    // 清理孤儿 daily_completions
-    data.daily_completions.retain(|dc| dc.task_id != id);
-    store::save_data(&data)
-}
-
-/// 一键清除所有已完成任务（同时清理对应的每日完成记录）
-#[tauri::command]
-fn clear_completed(state: tauri::State<AppState>) -> Result<(), String> {
-    let mut data = state.data.lock().unwrap();
-    let completed_ids: Vec<String> = data
-        .tasks
-        .iter()
-        .filter(|t| t.completed)
-        .map(|t| t.id.clone())
-        .collect();
-    data.tasks.retain(|t| !t.completed);
-    // 清理已删除任务的 daily_completions
-    for id in &completed_ids {
-        data.daily_completions.retain(|dc| &dc.task_id != id);
-    }
-    store::save_data(&data)
-}
-
-/// 按截止日期筛选任务
-#[tauri::command]
-fn get_tasks_by_date(state: tauri::State<AppState>, date: String) -> Vec<store::Task> {
-    state
-        .data
-        .lock()
-        .unwrap()
-        .tasks
-        .iter()
-        .filter(|t| t.due_date.as_deref() == Some(&date))
-        .cloned()
-        .collect()
-}
-
-/// 获取所有标签（去重排序）
-#[tauri::command]
-fn get_all_tags(state: tauri::State<AppState>) -> Vec<String> {
-    let data = state.data.lock().unwrap();
-    let mut tags: Vec<String> = data.tasks.iter().flat_map(|t| t.tags.clone()).collect();
-    tags.sort();
-    tags.dedup();
-    tags
-}
-
-/// 删除指定标签（从所有任务中移除该标签）
-#[tauri::command]
-fn delete_tag(state: tauri::State<AppState>, tag: String) -> Result<(), String> {
-    let mut data = state.data.lock().unwrap();
-    for task in data.tasks.iter_mut() {
-        task.tags.retain(|t| t != &tag);
-    }
-    store::save_data(&data)
-}
-
-/// 获取指定日期已完成的每日任务 ID 列表
-#[tauri::command]
-fn get_daily_completions(state: tauri::State<AppState>, date: String) -> Vec<String> {
-    state
-        .data
-        .lock()
-        .unwrap()
-        .daily_completions
-        .iter()
-        .filter(|dc| dc.date == date)
-        .map(|dc| dc.task_id.clone())
-        .collect()
-}
+use commands::{resolve_ai_settings, AppState};
 
 // ── 窗口管理命令 ──────────────────────────────
 
@@ -316,35 +123,7 @@ fn set_active_vendor(state: tauri::State<AppState>, id: Option<String>) -> Resul
     store::save_config(&config)
 }
 
-/// 解析当前 AI 配置：优先用选中的供应商，否则用第一个启用的
-fn resolve_ai_settings(config: &store::ConfigStore) -> Result<ai::AiSettings, String> {
-    // 1. 有 active_vendor_id 且供应商存在且启用
-    if let Some(active_id) = &config.active_vendor_id {
-        if let Some(v) = config
-            .vendors
-            .iter()
-            .find(|v| v.id == *active_id && v.enabled)
-        {
-            return Ok(ai::AiSettings {
-                enabled: true,
-                api_endpoint: format!("{}{}", v.base_url, v.api_path),
-                api_key: v.api_key.clone(),
-                model: v.model.clone(),
-            });
-        }
-    }
-    // 2. 找第一个启用的供应商
-    if let Some(v) = config.vendors.iter().find(|v| v.enabled) {
-        return Ok(ai::AiSettings {
-            enabled: true,
-            api_endpoint: format!("{}{}", v.base_url, v.api_path),
-            api_key: v.api_key.clone(),
-            model: v.model.clone(),
-        });
-    }
-    // 3. 无可用供应商
-    Err("AI 未配置：请在设置中添加并启用供应商".into())
-}
+// resolve_ai_settings 已迁移到 commands 模块
 
 // ── AI 功能命令 ──────────────────────────────
 
@@ -512,17 +291,17 @@ fn main() {
         })
         // 注册所有前端可调用的命令
         .invoke_handler(tauri::generate_handler![
-            get_tasks,
-            add_task,
-            toggle_task,
-            toggle_daily_task,
-            update_task,
-            delete_task,
-            clear_completed,
-            get_tasks_by_date,
-            get_all_tags,
-            delete_tag,
-            get_daily_completions,
+            commands::tasks::get_tasks,
+            commands::tasks::add_task,
+            commands::tasks::toggle_task,
+            commands::tasks::toggle_daily_task,
+            commands::tasks::update_task,
+            commands::tasks::delete_task,
+            commands::tasks::clear_completed,
+            commands::tasks::get_tasks_by_date,
+            commands::tasks::get_all_tags,
+            commands::tasks::delete_tag,
+            commands::tasks::get_daily_completions,
             set_reminder_minutes,
             get_reminder_minutes,
             get_ai_settings_all,
