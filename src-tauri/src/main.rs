@@ -4,7 +4,6 @@
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::sync::Mutex;
-use store::TaskStore;
 use tauri::Manager;
 use tauri_plugin_notification::NotificationExt;
 
@@ -14,7 +13,9 @@ mod store;
 /// 应用全局状态，由 Tauri 托管，可在所有命令中访问
 struct AppState {
     /// 任务数据存储（受 Mutex 保护，确保线程安全）
-    store: Mutex<TaskStore>,
+    data: Mutex<store::DataStore>,
+    /// 应用配置（供应商、主题、提醒等）
+    config: Mutex<store::ConfigStore>,
     /// 当天已通知的任务 ID 集合，避免重复提醒
     notified_today: Mutex<HashSet<String>>,
 }
@@ -50,13 +51,13 @@ struct AddTaskArgs {
 /// 获取所有任务列表
 #[tauri::command]
 fn get_tasks(state: tauri::State<AppState>) -> Vec<store::Task> {
-    state.store.lock().unwrap().tasks.clone()
+    state.data.lock().unwrap().tasks.clone()
 }
 
 /// 新增任务
 #[tauri::command]
 fn add_task(state: tauri::State<AppState>, args: AddTaskArgs) -> Result<store::Task, String> {
-    let mut store = state.store.lock().unwrap();
+    let mut data = state.data.lock().unwrap();
     let task = store::Task {
         id: uuid::Uuid::new_v4().to_string(),
         title: args.title,
@@ -70,16 +71,16 @@ fn add_task(state: tauri::State<AppState>, args: AddTaskArgs) -> Result<store::T
         is_daily: args.is_daily.unwrap_or(false),
         parent_id: args.parent_id,
     };
-    store.tasks.push(task.clone());
-    store::save_tasks(&store)?;
+    data.tasks.push(task.clone());
+    store::save_data(&data)?;
     Ok(task)
 }
 
 /// 切换任务完成状态（自动记录完成/取消时间）
 #[tauri::command]
 fn toggle_task(state: tauri::State<AppState>, id: String) -> Result<(), String> {
-    let mut store = state.store.lock().unwrap();
-    if let Some(task) = store.tasks.iter_mut().find(|t| t.id == id) {
+    let mut data = state.data.lock().unwrap();
+    if let Some(task) = data.tasks.iter_mut().find(|t| t.id == id) {
         task.completed = !task.completed;
         task.completed_at = if task.completed {
             Some(chrono::Utc::now().to_rfc3339())
@@ -87,7 +88,7 @@ fn toggle_task(state: tauri::State<AppState>, id: String) -> Result<(), String> 
             None
         };
     }
-    store::save_tasks(&store)
+    store::save_data(&data)
 }
 
 /// 切换每日任务的完成状态（按日期记录，支持跨天追踪）
@@ -97,26 +98,25 @@ fn toggle_daily_task(
     id: String,
     date: String,
 ) -> Result<(), String> {
-    let mut store = state.store.lock().unwrap();
-    if let Some(pos) = store
+    let mut data = state.data.lock().unwrap();
+    if let Some(pos) = data
         .daily_completions
         .iter()
         .position(|dc| dc.task_id == id && dc.date == date)
     {
-        store.daily_completions.remove(pos);
+        data.daily_completions.remove(pos);
     } else {
-        store
-            .daily_completions
+        data.daily_completions
             .push(store::DailyCompletion { task_id: id, date });
     }
-    store::save_tasks(&store)
+    store::save_data(&data)
 }
 
 /// 更新任务的所有字段
 #[tauri::command]
 fn update_task(state: tauri::State<AppState>, args: UpdateTaskArgs) -> Result<(), String> {
-    let mut store = state.store.lock().unwrap();
-    if let Some(task) = store.tasks.iter_mut().find(|t| t.id == args.id) {
+    let mut data = state.data.lock().unwrap();
+    if let Some(task) = data.tasks.iter_mut().find(|t| t.id == args.id) {
         task.title = args.title;
         task.due_date = args.due_date;
         task.tags = args.tags;
@@ -124,45 +124,45 @@ fn update_task(state: tauri::State<AppState>, args: UpdateTaskArgs) -> Result<()
         task.pinned = args.pinned;
         task.is_daily = args.is_daily;
     }
-    store::save_tasks(&store)
+    store::save_data(&data)
 }
 
 /// 删除指定任务（同时清理子任务和每日完成记录）
 #[tauri::command]
 fn delete_task(state: tauri::State<AppState>, id: String) -> Result<(), String> {
-    let mut store = state.store.lock().unwrap();
+    let mut data = state.data.lock().unwrap();
     // 删除目标任务
-    store.tasks.retain(|t| t.id != id);
+    data.tasks.retain(|t| t.id != id);
     // 级联删除子任务（parent_id 指向被删任务的）
-    store.tasks.retain(|t| t.parent_id.as_deref() != Some(&id));
+    data.tasks.retain(|t| t.parent_id.as_deref() != Some(&id));
     // 清理孤儿 daily_completions
-    store.daily_completions.retain(|dc| dc.task_id != id);
-    store::save_tasks(&store)
+    data.daily_completions.retain(|dc| dc.task_id != id);
+    store::save_data(&data)
 }
 
 /// 一键清除所有已完成任务（同时清理对应的每日完成记录）
 #[tauri::command]
 fn clear_completed(state: tauri::State<AppState>) -> Result<(), String> {
-    let mut store = state.store.lock().unwrap();
-    let completed_ids: Vec<String> = store
+    let mut data = state.data.lock().unwrap();
+    let completed_ids: Vec<String> = data
         .tasks
         .iter()
         .filter(|t| t.completed)
         .map(|t| t.id.clone())
         .collect();
-    store.tasks.retain(|t| !t.completed);
+    data.tasks.retain(|t| !t.completed);
     // 清理已删除任务的 daily_completions
     for id in &completed_ids {
-        store.daily_completions.retain(|dc| &dc.task_id != id);
+        data.daily_completions.retain(|dc| &dc.task_id != id);
     }
-    store::save_tasks(&store)
+    store::save_data(&data)
 }
 
 /// 按截止日期筛选任务
 #[tauri::command]
 fn get_tasks_by_date(state: tauri::State<AppState>, date: String) -> Vec<store::Task> {
     state
-        .store
+        .data
         .lock()
         .unwrap()
         .tasks
@@ -175,8 +175,8 @@ fn get_tasks_by_date(state: tauri::State<AppState>, date: String) -> Vec<store::
 /// 获取所有标签（去重排序）
 #[tauri::command]
 fn get_all_tags(state: tauri::State<AppState>) -> Vec<String> {
-    let store = state.store.lock().unwrap();
-    let mut tags: Vec<String> = store.tasks.iter().flat_map(|t| t.tags.clone()).collect();
+    let data = state.data.lock().unwrap();
+    let mut tags: Vec<String> = data.tasks.iter().flat_map(|t| t.tags.clone()).collect();
     tags.sort();
     tags.dedup();
     tags
@@ -185,18 +185,18 @@ fn get_all_tags(state: tauri::State<AppState>) -> Vec<String> {
 /// 删除指定标签（从所有任务中移除该标签）
 #[tauri::command]
 fn delete_tag(state: tauri::State<AppState>, tag: String) -> Result<(), String> {
-    let mut store = state.store.lock().unwrap();
-    for task in store.tasks.iter_mut() {
+    let mut data = state.data.lock().unwrap();
+    for task in data.tasks.iter_mut() {
         task.tags.retain(|t| t != &tag);
     }
-    store::save_tasks(&store)
+    store::save_data(&data)
 }
 
 /// 获取指定日期已完成的每日任务 ID 列表
 #[tauri::command]
 fn get_daily_completions(state: tauri::State<AppState>, date: String) -> Vec<String> {
     state
-        .store
+        .data
         .lock()
         .unwrap()
         .daily_completions
@@ -241,15 +241,15 @@ fn show_main_window(app: tauri::AppHandle) -> Result<(), String> {
 /// 设置任务到期提醒的提前分钟数（0 表示关闭提醒）
 #[tauri::command]
 fn set_reminder_minutes(state: tauri::State<AppState>, minutes: u32) -> Result<(), String> {
-    let mut store = state.store.lock().unwrap();
-    store.reminder_minutes = minutes;
-    store::save_tasks(&store)
+    let mut config = state.config.lock().unwrap();
+    config.reminder_minutes = minutes;
+    store::save_config(&config)
 }
 
 /// 获取当前提醒设置（分钟数）
 #[tauri::command]
 fn get_reminder_minutes(state: tauri::State<AppState>) -> u32 {
-    state.store.lock().unwrap().reminder_minutes
+    state.config.lock().unwrap().reminder_minutes
 }
 
 // ── AI 设置命令 ──────────────────────────────
@@ -257,10 +257,10 @@ fn get_reminder_minutes(state: tauri::State<AppState>) -> u32 {
 /// 获取 AI 配置状态（是否已配置可用供应商）
 #[tauri::command]
 fn get_ai_settings_all(state: tauri::State<AppState>) -> serde_json::Value {
-    let store = state.store.lock().unwrap();
+    let config = state.config.lock().unwrap();
     serde_json::json!({
-        "active_vendor_id": store.active_vendor_id,
-        "has_enabled_vendor": store.vendors.iter().any(|v| v.enabled),
+        "active_vendor_id": config.active_vendor_id,
+        "has_enabled_vendor": config.vendors.iter().any(|v| v.enabled),
     })
 }
 
@@ -269,7 +269,7 @@ fn get_ai_settings_all(state: tauri::State<AppState>) -> serde_json::Value {
 /// 获取所有供应商
 #[tauri::command]
 fn get_vendors(state: tauri::State<AppState>) -> Vec<store::Vendor> {
-    state.store.lock().unwrap().vendors.clone()
+    state.config.lock().unwrap().vendors.clone()
 }
 
 /// 添加供应商
@@ -278,47 +278,47 @@ fn add_vendor(
     state: tauri::State<AppState>,
     vendor: store::Vendor,
 ) -> Result<store::Vendor, String> {
-    let mut store = state.store.lock().unwrap();
-    store.vendors.push(vendor.clone());
-    store::save_tasks(&store)?;
+    let mut config = state.config.lock().unwrap();
+    config.vendors.push(vendor.clone());
+    store::save_config(&config)?;
     Ok(vendor)
 }
 
 /// 更新供应商
 #[tauri::command]
 fn update_vendor(state: tauri::State<AppState>, vendor: store::Vendor) -> Result<(), String> {
-    let mut store = state.store.lock().unwrap();
-    if let Some(v) = store.vendors.iter_mut().find(|v| v.id == vendor.id) {
+    let mut config = state.config.lock().unwrap();
+    if let Some(v) = config.vendors.iter_mut().find(|v| v.id == vendor.id) {
         *v = vendor;
     }
-    store::save_tasks(&store)
+    store::save_config(&config)
 }
 
 /// 删除供应商
 #[tauri::command]
 fn delete_vendor(state: tauri::State<AppState>, id: String) -> Result<(), String> {
-    let mut store = state.store.lock().unwrap();
-    store.vendors.retain(|v| v.id != id);
+    let mut config = state.config.lock().unwrap();
+    config.vendors.retain(|v| v.id != id);
     // 如果删除的是当前激活的供应商，清除激活状态
-    if store.active_vendor_id.as_deref() == Some(&id) {
-        store.active_vendor_id = None;
+    if config.active_vendor_id.as_deref() == Some(&id) {
+        config.active_vendor_id = None;
     }
-    store::save_tasks(&store)
+    store::save_config(&config)
 }
 
 /// 设置激活的供应商
 #[tauri::command]
 fn set_active_vendor(state: tauri::State<AppState>, id: Option<String>) -> Result<(), String> {
-    let mut store = state.store.lock().unwrap();
-    store.active_vendor_id = id;
-    store::save_tasks(&store)
+    let mut config = state.config.lock().unwrap();
+    config.active_vendor_id = id;
+    store::save_config(&config)
 }
 
 /// 解析当前 AI 配置：优先用选中的供应商，否则用第一个启用的
-fn resolve_ai_settings(store: &TaskStore) -> Result<ai::AiSettings, String> {
+fn resolve_ai_settings(config: &store::ConfigStore) -> Result<ai::AiSettings, String> {
     // 1. 有 active_vendor_id 且供应商存在且启用
-    if let Some(active_id) = &store.active_vendor_id {
-        if let Some(v) = store
+    if let Some(active_id) = &config.active_vendor_id {
+        if let Some(v) = config
             .vendors
             .iter()
             .find(|v| v.id == *active_id && v.enabled)
@@ -332,7 +332,7 @@ fn resolve_ai_settings(store: &TaskStore) -> Result<ai::AiSettings, String> {
         }
     }
     // 2. 找第一个启用的供应商
-    if let Some(v) = store.vendors.iter().find(|v| v.enabled) {
+    if let Some(v) = config.vendors.iter().find(|v| v.enabled) {
         return Ok(ai::AiSettings {
             enabled: true,
             api_endpoint: format!("{}{}", v.base_url, v.api_path),
@@ -353,9 +353,10 @@ async fn ai_parse_input(
     text: String,
 ) -> Result<ai::ParsedTask, String> {
     let (settings, existing_tags) = {
-        let store = state.store.lock().unwrap();
-        let settings = resolve_ai_settings(&store)?;
-        let existing_tags: Vec<String> = store.tasks.iter().flat_map(|t| t.tags.clone()).collect();
+        let config = state.config.lock().unwrap();
+        let settings = resolve_ai_settings(&config)?;
+        let data = state.data.lock().unwrap();
+        let existing_tags: Vec<String> = data.tasks.iter().flat_map(|t| t.tags.clone()).collect();
         (settings, existing_tags)
     };
     ai::parse_input(&settings, &text, &existing_tags).await
@@ -365,9 +366,10 @@ async fn ai_parse_input(
 #[tauri::command]
 async fn ai_daily_focus(state: tauri::State<'_, AppState>) -> Result<ai::FocusSuggestion, String> {
     let (settings, tasks) = {
-        let store = state.store.lock().unwrap();
-        let settings = resolve_ai_settings(&store)?;
-        let tasks = store.tasks.clone();
+        let config = state.config.lock().unwrap();
+        let settings = resolve_ai_settings(&config)?;
+        let data = state.data.lock().unwrap();
+        let tasks = data.tasks.clone();
         (settings, tasks)
     };
     ai::daily_focus(&settings, &tasks).await
@@ -380,15 +382,16 @@ async fn ai_decompose(
     task_id: String,
 ) -> Result<Vec<ai::SubTask>, String> {
     let (settings, task_title, existing_subtasks) = {
-        let store = state.store.lock().unwrap();
-        let settings = resolve_ai_settings(&store)?;
-        let task_title = store
+        let config = state.config.lock().unwrap();
+        let settings = resolve_ai_settings(&config)?;
+        let data = state.data.lock().unwrap();
+        let task_title = data
             .tasks
             .iter()
             .find(|t| t.id == task_id)
             .map(|t| t.title.clone())
             .ok_or("任务不存在")?;
-        let existing_subtasks: Vec<String> = store
+        let existing_subtasks: Vec<String> = data
             .tasks
             .iter()
             .filter(|t| t.parent_id.as_deref() == Some(&task_id))
@@ -405,10 +408,11 @@ async fn ai_overdue_suggest(
     state: tauri::State<'_, AppState>,
 ) -> Result<Vec<ai::OverdueSuggestion>, String> {
     let (settings, overdue) = {
-        let store = state.store.lock().unwrap();
-        let settings = resolve_ai_settings(&store)?;
+        let config = state.config.lock().unwrap();
+        let settings = resolve_ai_settings(&config)?;
+        let data = state.data.lock().unwrap();
         let today = chrono::Local::now().format("%Y-%m-%d").to_string();
-        let overdue: Vec<store::Task> = store
+        let overdue: Vec<store::Task> = data
             .tasks
             .iter()
             .filter(|t| !t.completed && t.due_date.as_deref().is_some_and(|d| d < today.as_str()))
@@ -423,9 +427,10 @@ async fn ai_overdue_suggest(
 #[tauri::command]
 async fn ai_chat(state: tauri::State<'_, AppState>, message: String) -> Result<String, String> {
     let (settings, tasks) = {
-        let store = state.store.lock().unwrap();
-        let settings = resolve_ai_settings(&store)?;
-        let tasks = store.tasks.clone();
+        let config = state.config.lock().unwrap();
+        let settings = resolve_ai_settings(&config)?;
+        let data = state.data.lock().unwrap();
+        let tasks = data.tasks.clone();
         (settings, tasks)
     };
     ai::chat(&settings, &message, &tasks).await
@@ -434,24 +439,25 @@ async fn ai_chat(state: tauri::State<'_, AppState>, message: String) -> Result<S
 /// 获取当前主题设置
 #[tauri::command]
 fn get_theme(state: tauri::State<AppState>) -> String {
-    state.store.lock().unwrap().theme.clone()
+    state.config.lock().unwrap().theme.clone()
 }
 
 /// 设置主题模式并持久化
 #[tauri::command]
 fn set_theme(state: tauri::State<AppState>, theme: String) -> Result<(), String> {
-    let mut store = state.store.lock().unwrap();
-    store.theme = theme;
-    store::save_tasks(&store)
+    let mut config = state.config.lock().unwrap();
+    config.theme = theme;
+    store::save_config(&config)
 }
 
 /// 应用入口：初始化存储、注册命令、启动后台提醒线程
 fn main() {
-    let store = store::load_tasks();
+    let (data, config) = store::initialize();
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
         .manage(AppState {
-            store: Mutex::new(store),
+            data: Mutex::new(data),
+            config: Mutex::new(config),
             notified_today: Mutex::new(HashSet::new()),
         })
         // 注册所有前端可调用的命令
@@ -496,14 +502,15 @@ fn main() {
                     let tasks_snapshot: Vec<(String, String, Option<String>)>;
                     {
                         let state = handle.state::<AppState>();
-                        let store = state.store.lock().unwrap();
-                        reminder = store.reminder_minutes;
+                        let config = state.config.lock().unwrap();
+                        reminder = config.reminder_minutes;
                         // 提醒已关闭，跳过本轮检查
                         if reminder == 0 {
                             continue;
                         }
+                        let data = state.data.lock().unwrap();
                         // 快照当前未完成且有截止日期的任务（避免长时间持有锁）
-                        tasks_snapshot = store
+                        tasks_snapshot = data
                             .tasks
                             .iter()
                             .filter(|t| !t.completed && t.due_date.is_some())
