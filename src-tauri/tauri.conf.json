@@ -14,17 +14,17 @@
       {
         "label": "main",
         "title": "TODO",
-        "width": 780,
+        "width": 1000,
         "height": 600,
         "minWidth": 600,
-        "minHeight": 480,
+        "minHeight": 600,
         "resizable": true
       },
       {
         "label": "floating",
         "title": "TODO",
-        "width": 320,
-        "height": 360,
+        "width": 260,
+        "height": 320,
         "decorations": false,
         "transparent": true,
         "shadow": false,

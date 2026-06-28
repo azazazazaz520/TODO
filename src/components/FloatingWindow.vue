@@ -13,7 +13,7 @@ const showPanel = ref(false);
 const isPaused = ref(false);
 
 /** 悬浮窗背景色（透明度由控制面板调整） */
-const floatingBg = computed(() => `rgba(30, 30, 40, ${opacity.value})`);
+const floatingBg = computed(() => `rgba(28, 28, 34, ${opacity.value})`);
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let pollInterval: ReturnType<typeof setInterval> | null = null;
@@ -261,10 +261,12 @@ function onPointerUp() {
 }
 
 .floating-window {
-  width: 320px;
+  width: 260px;
   min-height: 100vh;
-  clip-path: inset(0 round var(--radius-lg));
-  filter: drop-shadow(0 var(--space-sm) 32px rgba(0, 0, 0, 0.4));
+  clip-path: inset(0 round 20px);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  filter: drop-shadow(0 2px 16px rgba(0, 0, 0, 0.35));
   overflow: hidden;
   overflow-y: auto;
   scrollbar-width: none;
@@ -285,19 +287,19 @@ function onPointerUp() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-sm) var(--space-sm);
-  background: rgba(255, 255, 255, 0.05);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 6px var(--space-sm);
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   cursor: move;
   -webkit-app-region: drag;
 }
 
 .topbar-left {
-  font-size: var(--text-sm);
+  font-size: 11px;
   color: var(--text-disabled);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .count {
@@ -312,11 +314,11 @@ function onPointerUp() {
 }
 
 .topbar-btn {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
   border: none;
   color: var(--text-muted);
-  font-size: var(--text-xs);
-  padding: var(--space-xs) var(--space-sm);
+  font-size: 10px;
+  padding: 3px 7px;
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -333,8 +335,8 @@ function onPointerUp() {
 }
 
 .card-area {
-  padding: var(--space-lg);
-  min-height: 80px;
+  padding: var(--space-md) var(--space-sm);
+  min-height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -342,11 +344,11 @@ function onPointerUp() {
 
 .card {
   width: 100%;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-lg);
-  padding: var(--space-sm) var(--space-lg);
-  animation: fadeIn 0.35s ease;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md);
+  padding: var(--space-xs) var(--space-md);
+  animation: fadeIn 0.3s ease;
 }
 
 @keyframes fadeIn {
@@ -361,13 +363,13 @@ function onPointerUp() {
 }
 
 .card-title {
-  font-size: var(--text-md);
+  font-size: var(--text-sm);
   color: var(--text-primary);
-  margin-bottom: var(--space-sm);
-  line-height: 1.4;
+  margin-bottom: var(--space-xs);
+  line-height: 1.3;
   display: flex;
   align-items: flex-start;
-  gap: 6px;
+  gap: 4px;
 }
 
 .card-pin {
@@ -425,8 +427,8 @@ function onPointerUp() {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 var(--space-lg) var(--space-md);
-  gap: var(--space-sm);
+  padding: 0 var(--space-sm) var(--space-sm);
+  gap: var(--space-xs);
 }
 
 .arrow-btn {
@@ -469,18 +471,18 @@ function onPointerUp() {
 }
 
 .panel {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  padding: var(--space-md) var(--space-sm);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding: var(--space-sm) var(--space-sm);
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
 }
 
 .panel-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: var(--text-sm);
+  font-size: 11px;
   color: var(--text-muted);
 }
 
@@ -520,13 +522,13 @@ function onPointerUp() {
 
 .exit-btn {
   width: 100%;
-  margin-top: var(--space-xs);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--text-muted);
-  padding: 6px;
+  padding: 4px;
   border-radius: var(--radius-sm);
-  font-size: var(--text-sm);
+  font-size: 11px;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
