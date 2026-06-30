@@ -246,5 +246,6 @@ defineExpose({
 <style scoped>
 .codemirror-wrapper {
   flex: 1;
+  overflow: hidden;
 }
 </style>
