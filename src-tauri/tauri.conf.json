@@ -47,6 +47,20 @@
         "resizable": true,
         "visible": false,
         "url": "/?window=import"
+      },
+      {
+        "label": "selector",
+        "title": "Prism",
+        "width": 1920,
+        "height": 1080,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "alwaysOnTop": true,
+        "resizable": false,
+        "visible": false,
+        "fullscreen": true,
+        "url": "/?window=selector"
       }
     ],
     "security": {

@@ -52,6 +52,15 @@ pub fn hide_import_window(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// 关闭选区窗
+#[tauri::command]
+pub fn hide_selector_window(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("selector") {
+        win.hide().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 // ── 提醒设置 ──────────────────────────────
 
 /// 设置任务到期提醒的提前分钟数（0 表示关闭提醒）
