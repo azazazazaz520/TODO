@@ -231,11 +231,23 @@ function getSelection(): string {
   return view.state.doc.sliceString(from, to);
 }
 
+/** 在当前行首插入文本（用于标题/列表/引用等行级操作） */
+function prependToLine(text: string) {
+  if (!view) return;
+  const pos = view.state.selection.main.head;
+  const line = view.state.doc.lineAt(pos);
+  view.dispatch({
+    changes: { from: line.from, insert: text },
+  });
+  view.focus();
+}
+
 defineExpose({
   insertText,
   wrapSelection,
   focus,
   getSelection,
+  prependToLine,
 });
 </script>
 
