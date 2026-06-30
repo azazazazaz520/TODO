@@ -19,16 +19,50 @@ pub struct FileEntry {
 }
 
 /// 安全解析笔记相对路径，防止路径穿越攻击
+/// 支持不存在的路径：会先规范化最长的存在祖先目录，再拼接剩余部分
 fn resolve_note_path(base: &Path, rel: &str) -> Result<PathBuf, String> {
     let full = base.join(rel);
-    let canonical = full
+
+    // 尝试规范化完整路径（路径存在时）
+    if let Ok(canonical) = full.canonicalize() {
+        let root = base.canonicalize().unwrap_or_default();
+        if !canonical.starts_with(&root) {
+            return Err("路径越界，拒绝访问".into());
+        }
+        return Ok(canonical);
+    }
+
+    // 路径不存在：找到最长存在的祖先目录进行规范化
+    let mut existing = full.clone();
+    let mut trailing: Vec<std::ffi::OsString> = Vec::new();
+    while !existing.exists() {
+        if let Some(name) = existing.file_name().map(|n| n.to_os_string()) {
+            trailing.push(name);
+        }
+        if let Some(parent) = existing.parent() {
+            existing = parent.to_path_buf();
+        } else {
+            return Err("路径解析失败：无法定位有效祖先目录".into());
+        }
+    }
+
+    let canonical_base = existing
         .canonicalize()
         .map_err(|e| format!("路径解析失败: {}", e))?;
     let root = base.canonicalize().unwrap_or_default();
-    if !canonical.starts_with(&root) {
+
+    // 拼接回剩余路径段
+    let mut resolved = canonical_base;
+    while let Some(segment) = trailing.pop() {
+        resolved = resolved.join(segment);
+    }
+
+    // 再次规范化（如果拼接后的路径碰巧存在）并校验越界
+    let final_path = resolved.canonicalize().unwrap_or(resolved);
+    if !final_path.starts_with(&root) {
         return Err("路径越界，拒绝访问".into());
     }
-    Ok(canonical)
+    Ok(final_path)
 }
 
 /// 递归读取目录结构
